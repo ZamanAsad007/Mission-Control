@@ -4,6 +4,7 @@ import { NasaClient } from '@mission-control/nasa-client';
 import { startIngestionRun, finishIngestionRun, getPool } from '@mission-control/db';
 import { runApodJob } from './jobs/apod.job';
 import { runNeoWsJob } from './jobs/neows.job';
+import { runDonkiJob } from './jobs/donki.job';
 import { config } from './config';
 
 export const INGESTION_QUEUE_NAME = 'nasa-ingestion-queue';
@@ -75,7 +76,20 @@ export class IngestionScheduler {
       }
     );
 
-    console.log('[Scheduler] Repeatable jobs scheduled: APOD (daily), NeoWs (every 4h)');
+    // Job 3: DONKI space weather every 2 hours
+    await this.queue.add(
+      'donki_job',
+      {},
+      {
+        repeat: {
+          pattern: '0 */2 * * *',
+        },
+        jobId: 'repeatable-donki-job',
+        removeOnComplete: true,
+      }
+    );
+
+    console.log('[Scheduler] Repeatable jobs scheduled: APOD (daily), NeoWs (every 4h), DONKI (every 2h)');
   }
 
   public async triggerJob(jobName: string, data: any = {}): Promise<Job> {
@@ -100,6 +114,13 @@ export class IngestionScheduler {
         resultDetails = res;
       } else if (jobName === 'neows_job') {
         const res = await runNeoWsJob(this.nasaClient, pool, data.startDate, data.endDate);
+        recordsUpserted = res.count;
+        resultDetails = res;
+      } else if (jobName === 'donki_job') {
+        const res = await runDonkiJob(this.nasaClient, pool, getRedisConnection(), {
+          startDate: data.startDate,
+          endDate: data.endDate,
+        });
         recordsUpserted = res.count;
         resultDetails = res;
       } else {
