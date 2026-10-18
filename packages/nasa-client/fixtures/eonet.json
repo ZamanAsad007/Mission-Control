@@ -1,0 +1,70 @@
+{
+  "title": "EONET Events",
+  "description": "Natural events tracker",
+  "link": "https://eonet.gsfc.nasa.gov/api/v3/events",
+  "events": [
+    {
+      "id": "EONET_25094",
+      "title": "Hurricane Simon",
+      "description": "Tropical cyclone",
+      "link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_25094",
+      "closed": null,
+      "categories": [
+        {
+          "id": "severeStorms",
+          "title": "Severe Storms"
+        }
+      ],
+      "sources": [
+        {
+          "id": "JTWC",
+          "url": "https://www.metoc.navy.mil/jtwc/products/ep2026.tcw"
+        }
+      ],
+      "geometry": [
+        {
+          "magnitudeValue": 65,
+          "magnitudeUnit": "kts",
+          "date": "2026-10-09T00:00:00Z",
+          "type": "Point",
+          "coordinates": [-104.3, 15.7]
+        },
+        {
+          "magnitudeValue": 130,
+          "magnitudeUnit": "kts",
+          "date": "2026-10-10T12:00:00Z",
+          "type": "Point",
+          "coordinates": [-104.8, 17.3]
+        }
+      ]
+    },
+    {
+      "id": "EONET_25095",
+      "title": "Riverside Fire Complex",
+      "description": "Wildfire outbreak",
+      "link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_25095",
+      "closed": null,
+      "categories": [
+        {
+          "id": "wildfires",
+          "title": "Wildfires"
+        }
+      ],
+      "sources": [
+        {
+          "id": "InciWeb",
+          "url": "https://inciweb.wildfire.gov"
+        }
+      ],
+      "geometry": [
+        {
+          "magnitudeValue": null,
+          "magnitudeUnit": null,
+          "date": "2026-10-12T14:30:00Z",
+          "type": "Point",
+          "coordinates": [-122.5, 45.2]
+        }
+      ]
+    }
+  ]
+}

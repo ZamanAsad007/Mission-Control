@@ -1,0 +1,26 @@
+[
+  {
+    "activityID": "2024-05-05T09:24:00-CME-001",
+    "catalog": "M2M_CATALOG",
+    "startTime": "2024-05-05T09:24:00Z",
+    "sourceLocation": "S18W85",
+    "activeRegionNum": 13663,
+    "instruments": [
+      {
+        "displayName": "SOHO: LASCO/C2"
+      }
+    ],
+    "cmeAnalyses": [
+      {
+        "isMostAccurate": true,
+        "latitude": -18,
+        "longitude": 85,
+        "halfAngle": 32,
+        "speed": 820,
+        "type": "C",
+        "featureCode": "CME"
+      }
+    ],
+    "linkedEvents": null
+  }
+]
