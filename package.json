@@ -14,7 +14,8 @@
     "format": "prettier --write \"**/*.{js,ts,json}\"",
     "format:check": "prettier --check \"**/*.{js,ts,json}\"",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "backfill": "npm run backfill --workspace=@mission-control/ingestion-service"
   },
   "devDependencies": {
     "@types/node": "^20.14.9",

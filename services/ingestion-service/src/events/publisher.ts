@@ -1,7 +1,8 @@
 import Redis from 'ioredis';
-import { DbEvent } from '@mission-control/db';
+import { DbEvent, DbAsteroid } from '@mission-control/db';
 
 export const EVENT_CREATED_CHANNEL = 'event.created';
+export const ASTEROID_CREATED_CHANNEL = 'asteroid.created';
 
 export async function publishEventCreated(redis: Redis, event: DbEvent): Promise<number> {
   const payload = JSON.stringify({
@@ -19,4 +20,13 @@ export async function publishEventsCreated(redis: Redis, events: DbEvent[]): Pro
     publishedCount++;
   }
   return publishedCount;
+}
+
+export async function publishAsteroidCreated(redis: Redis, asteroid: DbAsteroid): Promise<number> {
+  const payload = JSON.stringify({
+    event: 'asteroid.created',
+    data: asteroid,
+    timestamp: new Date().toISOString(),
+  });
+  return redis.publish(ASTEROID_CREATED_CHANNEL, payload);
 }
