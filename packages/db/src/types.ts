@@ -53,3 +53,54 @@ export interface DbSpaceWeatherStat {
   count: number;
 }
 
+export interface DbUser {
+  id?: string;
+  email: string;
+  password_hash: string;
+  telegram_chat_id?: string | null;
+  discord_webhook?: string | null;
+  created_at?: Date | string;
+}
+
+export type AlertRuleType = 'solar_flare' | 'asteroid' | 'natural_event';
+
+export interface SolarFlareRuleConfig {
+  minClass: string; // e.g. "M5", "X1"
+}
+
+export interface AsteroidRuleConfig {
+  hazardousOnly?: boolean;
+  maxMissDistanceKm?: number;
+}
+
+export interface NaturalEventRuleConfig {
+  categories?: string[];
+  center?: [number, number]; // [longitude, latitude]
+  radiusKm?: number;
+}
+
+export type AlertRuleConfig = SolarFlareRuleConfig | AsteroidRuleConfig | NaturalEventRuleConfig | Record<string, any>;
+
+export interface DbAlertRule {
+  id?: string;
+  user_id: string;
+  name: string;
+  type: AlertRuleType;
+  config: AlertRuleConfig;
+  channels: string[]; // ['telegram', 'discord', 'email']
+  cooldown_minutes: number;
+  active: boolean;
+  created_at?: Date | string;
+}
+
+export interface DbAlertDelivery {
+  id?: string;
+  rule_id: string;
+  event_ref: string;
+  channel: string;
+  status: 'sent' | 'failed';
+  sent_at?: Date | string;
+  error?: string | null;
+}
+
+

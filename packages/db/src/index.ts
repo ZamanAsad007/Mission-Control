@@ -5,3 +5,7 @@ export * from './repositories/apod.repository';
 export * from './repositories/asteroids.repository';
 export * from './repositories/events.repository';
 export * from './repositories/runs.repository';
+export * from './repositories/users.repository';
+export * from './repositories/alert-rules.repository';
+export * from './repositories/alert-deliveries.repository';
+
