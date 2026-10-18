@@ -5,6 +5,7 @@ import { startIngestionRun, finishIngestionRun, getPool } from '@mission-control
 import { runApodJob } from './jobs/apod.job';
 import { runNeoWsJob } from './jobs/neows.job';
 import { runDonkiJob } from './jobs/donki.job';
+import { runEonetJob } from './jobs/eonet.job';
 import { config } from './config';
 
 export const INGESTION_QUEUE_NAME = 'nasa-ingestion-queue';
@@ -89,7 +90,22 @@ export class IngestionScheduler {
       }
     );
 
-    console.log('[Scheduler] Repeatable jobs scheduled: APOD (daily), NeoWs (every 4h), DONKI (every 2h)');
+    // Job 4: EONET natural events every 1 hour
+    await this.queue.add(
+      'eonet_job',
+      {},
+      {
+        repeat: {
+          pattern: '0 * * * *',
+        },
+        jobId: 'repeatable-eonet-job',
+        removeOnComplete: true,
+      }
+    );
+
+    console.log(
+      '[Scheduler] Repeatable jobs scheduled: APOD (daily), NeoWs (every 4h), DONKI (every 2h), EONET (hourly)'
+    );
   }
 
   public async triggerJob(jobName: string, data: any = {}): Promise<Job> {
@@ -120,6 +136,15 @@ export class IngestionScheduler {
         const res = await runDonkiJob(this.nasaClient, pool, getRedisConnection(), {
           startDate: data.startDate,
           endDate: data.endDate,
+        });
+        recordsUpserted = res.count;
+        resultDetails = res;
+      } else if (jobName === 'eonet_job') {
+        const res = await runEonetJob(this.nasaClient, pool, getRedisConnection(), {
+          days: data.days,
+          status: data.status,
+          category: data.category,
+          limit: data.limit,
         });
         recordsUpserted = res.count;
         resultDetails = res;

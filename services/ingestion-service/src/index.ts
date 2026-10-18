@@ -55,5 +55,7 @@ export * from './scheduler';
 export * from './jobs/apod.job';
 export * from './jobs/neows.job';
 export * from './jobs/donki.job';
+export * from './jobs/eonet.job';
 export * from './events/publisher';
+
 
