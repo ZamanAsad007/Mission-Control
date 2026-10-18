@@ -1,6 +1,7 @@
 import { createApp } from './app';
 import { runMigrations, closePool } from '@mission-control/db';
 import { closeRedis } from './redis';
+import { setupCacheInvalidationListener } from './middleware/cache.middleware';
 import { config } from './config';
 
 async function main() {
@@ -11,6 +12,13 @@ async function main() {
     await runMigrations();
   } catch (err: any) {
     console.warn('[API Service] Migration warning (will proceed if DB is already up):', err.message);
+  }
+
+  // Setup Redis cache invalidation listener for event.created
+  try {
+    setupCacheInvalidationListener();
+  } catch (err: any) {
+    console.warn('[API Service] Redis cache listener warning:', err.message);
   }
 
   const app = createApp();

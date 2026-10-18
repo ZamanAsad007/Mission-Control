@@ -1,5 +1,6 @@
 import express, { Express } from 'express';
 import cors from 'cors';
+import { createRateLimiter } from './middleware/rate-limit.middleware';
 import { apodRouter } from './routes/apod.router';
 import { asteroidsRouter } from './routes/asteroids.router';
 import { eventsRouter } from './routes/events.router';
@@ -11,6 +12,10 @@ export function createApp(): Express {
 
   app.use(cors());
   app.use(express.json());
+
+  // Global rate limiter (100 requests per 15 minutes)
+  const limiter = createRateLimiter();
+  app.use(limiter);
 
   // Mount API routes under /api
   app.use('/api/apod', apodRouter);

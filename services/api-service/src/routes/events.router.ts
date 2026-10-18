@@ -1,7 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { getEvents, getEventsNearby, getEventById, getPool, EventFilter } from '@mission-control/db';
+import { cacheMiddleware } from '../middleware/cache.middleware';
 
 export const eventsRouter = Router();
+
+// Cache events for 60 seconds
+eventsRouter.use(cacheMiddleware(60, 'events'));
 
 // GET /api/events/nearby?lat=&lng=&radiusKm=&limit=
 eventsRouter.get('/nearby', async (req: Request, res: Response) => {

@@ -1,7 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { getSpaceWeatherStats, getPool } from '@mission-control/db';
+import { cacheMiddleware } from '../middleware/cache.middleware';
 
 export const statsRouter = Router();
+
+// Cache space weather stats for 5 minutes (300s)
+statsRouter.use(cacheMiddleware(300, 'stats'));
 
 // GET /api/stats/space-weather?days=
 statsRouter.get('/space-weather', async (req: Request, res: Response) => {

@@ -1,7 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { getApodByDate, getLatestApod, getPool } from '@mission-control/db';
+import { cacheMiddleware } from '../middleware/cache.middleware';
 
 export const apodRouter = Router();
+
+// Cache APOD responses for 6 hours (21600s)
+apodRouter.use(cacheMiddleware(6 * 3600, 'apod'));
 
 // GET /api/apod/today
 apodRouter.get('/today', async (_req: Request, res: Response) => {
