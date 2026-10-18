@@ -202,6 +202,22 @@ export const swaggerSpec = {
         },
       },
     },
+    '/stream': {
+      get: {
+        summary: 'Server-Sent Events (SSE) live event stream',
+        tags: ['Real-Time'],
+        responses: {
+          '200': {
+            description: 'Real-time SSE event stream',
+            content: {
+              'text/event-stream': {
+                schema: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/health': {
       get: {
         summary: 'Health check and background ingestion status',
