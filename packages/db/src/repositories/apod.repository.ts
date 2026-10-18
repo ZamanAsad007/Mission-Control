@@ -35,3 +35,9 @@ export async function getApodByDate(date: string, pool: Pool = getPool()): Promi
   const result = await pool.query('SELECT * FROM apod WHERE date = $1', [date]);
   return result.rows[0] || null;
 }
+
+export async function getLatestApod(pool: Pool = getPool()): Promise<DbApod | null> {
+  const result = await pool.query('SELECT * FROM apod ORDER BY date DESC LIMIT 1');
+  return result.rows[0] || null;
+}
+

@@ -46,3 +46,10 @@ export interface DbIngestionRun {
   records_upserted: number;
   error?: string | null;
 }
+
+export interface DbSpaceWeatherStat {
+  date: string;
+  flare_class: string | null;
+  count: number;
+}
+
