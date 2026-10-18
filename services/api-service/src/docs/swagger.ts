@@ -218,6 +218,177 @@ export const swaggerSpec = {
         },
       },
     },
+    '/auth/register': {
+      post: {
+        summary: 'Register a new user',
+        tags: ['Auth'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'password'],
+                properties: {
+                  email: { type: 'string', format: 'email' },
+                  password: { type: 'string', minLength: 6 },
+                  telegram_chat_id: { type: 'string' },
+                  discord_webhook: { type: 'string', format: 'uri' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'User registered successfully' },
+          '400': { description: 'Validation error' },
+          '409': { description: 'Email already exists' },
+        },
+      },
+    },
+    '/auth/login': {
+      post: {
+        summary: 'Authenticate and receive JWT token',
+        tags: ['Auth'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'password'],
+                properties: {
+                  email: { type: 'string', format: 'email' },
+                  password: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Authenticated successfully' },
+          '401': { description: 'Invalid email or password' },
+        },
+      },
+    },
+    '/auth/me': {
+      get: {
+        summary: 'Get current user profile',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'User profile retrieved' },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/alerts/rules': {
+      get: {
+        summary: 'List alert rules for authenticated user',
+        tags: ['Alerts'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'List of alert rules' },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+      post: {
+        summary: 'Create a new alert rule',
+        tags: ['Alerts'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'type', 'config', 'channels'],
+                properties: {
+                  name: { type: 'string' },
+                  type: { type: 'string', enum: ['solar_flare', 'asteroid', 'natural_event'] },
+                  config: { type: 'object' },
+                  channels: { type: 'array', items: { type: 'string', enum: ['telegram', 'discord', 'email'] } },
+                  cooldown_minutes: { type: 'integer', default: 60 },
+                  active: { type: 'boolean', default: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Alert rule created' },
+          '400': { description: 'Validation error' },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/alerts/rules/{id}': {
+      put: {
+        summary: 'Update an existing alert rule',
+        tags: ['Alerts'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'Alert rule updated' },
+          '400': { description: 'Validation error' },
+          '404': { description: 'Alert rule not found' },
+        },
+      },
+      delete: {
+        summary: 'Delete an alert rule',
+        tags: ['Alerts'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'Alert rule deleted' },
+          '404': { description: 'Alert rule not found' },
+        },
+      },
+    },
+    '/alerts/history': {
+      get: {
+        summary: 'Get notification delivery history for authenticated user',
+        tags: ['Alerts'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } },
+          { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } },
+        ],
+        responses: {
+          '200': { description: 'Notification delivery history' },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/alerts/test': {
+      post: {
+        summary: 'Send a test notification to configured channels',
+        tags: ['Alerts'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  channel: { type: 'string', enum: ['telegram', 'discord', 'email'] },
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Test notification results' },
+          '400': { description: 'Invalid channel or missing destination' },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+    },
     '/health': {
       get: {
         summary: 'Health check and background ingestion status',
@@ -225,6 +396,15 @@ export const swaggerSpec = {
         responses: {
           '200': { description: 'Service health and background job status' },
         },
+      },
+    },
+  },
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
       },
     },
   },

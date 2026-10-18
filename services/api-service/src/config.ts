@@ -10,4 +10,6 @@ export const config = {
     url: process.env.REDIS_URL,
   },
   databaseUrl: process.env.DATABASE_URL,
+  jwtSecret: process.env.JWT_SECRET || 'mission-control-jwt-secret-key-2026',
 };
+
