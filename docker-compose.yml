@@ -83,6 +83,37 @@ services:
     depends_on:
       - api-service
 
+  alert-service:
+    build:
+      context: .
+      dockerfile: services/alert-service/Dockerfile
+    container_name: mission_control_alerts
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-mission_user}:${POSTGRES_PASSWORD:-mission_password}@postgres:5432/${POSTGRES_DB:-mission_control}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_FROM: alerts@mission-control.space
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mission_control_mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+
 volumes:
   pgdata:
   redisdata:
