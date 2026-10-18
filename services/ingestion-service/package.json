@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Background ingestion service for NASA data with BullMQ scheduler",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",

@@ -1,6 +1,6 @@
 import { upsertApod, getApodByDate } from '../src/repositories/apod.repository';
 import { upsertAsteroids, getAsteroidsByDateRange } from '../src/repositories/asteroids.repository';
-import { upsertEvents, getEvents, getEventsNearby } from '../src/repositories/events.repository';
+import { upsertEvents, getEventsNearby } from '../src/repositories/events.repository';
 import { startIngestionRun, finishIngestionRun, getLastRuns } from '../src/repositories/runs.repository';
 
 describe('Database Repositories (Unit with mock Pool)', () => {
