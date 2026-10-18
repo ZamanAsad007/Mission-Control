@@ -7,6 +7,7 @@ import { eventsRouter } from './routes/events.router';
 import { statsRouter } from './routes/stats.router';
 import { healthRouter } from './routes/health.router';
 import { streamRouter } from './routes/stream.router';
+import { authRouter } from './routes/auth.router';
 import { swaggerUiServe, swaggerUiSetup, swaggerSpec } from './docs/swagger';
 
 export function createApp(): Express {
@@ -30,6 +31,7 @@ export function createApp(): Express {
   app.use('/api/events', eventsRouter);
   app.use('/api/stats', statsRouter);
   app.use('/api/stream', streamRouter);
+  app.use('/api/auth', authRouter);
   app.use('/api/health', healthRouter);
 
   // Also support direct paths without /api prefix
@@ -38,6 +40,7 @@ export function createApp(): Express {
   app.use('/events', eventsRouter);
   app.use('/stats', statsRouter);
   app.use('/stream', streamRouter);
+  app.use('/auth', authRouter);
   app.use('/health', healthRouter);
 
   return app;
