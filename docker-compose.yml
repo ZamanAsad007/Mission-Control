@@ -31,6 +31,27 @@ services:
       timeout: 5s
       retries: 5
 
+  ingestion-service:
+    build:
+      context: .
+      dockerfile: services/ingestion-service/Dockerfile
+    container_name: mission_control_ingestion
+    restart: unless-stopped
+    ports:
+      - "${INGESTION_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      INGESTION_PORT: 3001
+      DATABASE_URL: postgres://${POSTGRES_USER:-mission_user}:${POSTGRES_PASSWORD:-mission_password}@postgres:5432/${POSTGRES_DB:-mission_control}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NASA_API_KEY: ${NASA_API_KEY:-DEMO_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   pgdata:
   redisdata:
