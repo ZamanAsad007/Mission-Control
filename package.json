@@ -1,0 +1,25 @@
+{
+  "name": "mission-control",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NASA Space & Earth Events Dashboard monorepo",
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "eslint . --ext .js,.ts",
+    "format": "prettier --write \"**/*.{js,ts,json}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,json}\"",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.2",
+    "typescript": "^5.5.2"
+  }
+}
