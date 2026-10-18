@@ -1,0 +1,49 @@
+.PHONY: help up down restart build logs ps clean backfill test lint format
+
+# Default target
+help:
+	@echo "Mission Control - Available Commands:"
+	@echo "  make up          - Start all docker containers in background"
+	@echo "  make down        - Stop and remove all containers"
+	@echo "  make restart     - Restart all docker containers"
+	@echo "  make build       - Build docker images"
+	@echo "  make logs        - Follow logs from all docker containers"
+	@echo "  make ps          - Show status of running containers"
+	@echo "  make clean       - Stop containers and remove volumes"
+	@echo "  make backfill    - Run 30-day historical data ingestion"
+	@echo "  make test        - Run test suite across all monorepo workspaces"
+	@echo "  make lint        - Run linter across all workspaces"
+	@echo "  make format      - Format source code with Prettier"
+
+up:
+	docker compose up -d
+
+down:
+	docker compose down
+
+restart:
+	docker compose restart
+
+build:
+	docker compose build
+
+logs:
+	docker compose logs -f
+
+ps:
+	docker compose ps
+
+clean:
+	docker compose down -v
+
+backfill:
+	npm run backfill
+
+test:
+	npm test
+
+lint:
+	npm run lint
+
+format:
+	npm run format

@@ -52,6 +52,38 @@ services:
       redis:
         condition: service_healthy
 
+  api-service:
+    build:
+      context: .
+      dockerfile: services/api-service/Dockerfile
+    container_name: mission_control_api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      API_PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-mission_user}:${POSTGRES_PASSWORD:-mission_password}@postgres:5432/${POSTGRES_DB:-mission_control}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: mission_control_gateway
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-80}:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api-service
+
 volumes:
   pgdata:
   redisdata:
+

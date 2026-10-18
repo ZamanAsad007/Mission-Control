@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { getPool } from '../client';
-import { DbEvent } from '../types';
+import { DbEvent, DbSpaceWeatherStat } from '../types';
 
 export interface UpsertEventsResult {
   upsertedCount: number;
@@ -101,6 +101,7 @@ export interface EventFilter {
   source?: string;
   from?: string;
   to?: string;
+  bbox?: [number, number, number, number]; // [minLng, minLat, maxLng, maxLat]
   limit?: number;
   offset?: number;
 }
@@ -129,6 +130,15 @@ export async function getEvents(filters: EventFilter = {}, pool: Pool = getPool(
     conditions.push(`started_at <= $${params.length}`);
   }
 
+  if (filters.bbox && filters.bbox.length === 4) {
+    const [minLng, minLat, maxLng, maxLat] = filters.bbox;
+    params.push(minLng, minLat, maxLng, maxLat);
+    const p = params.length;
+    conditions.push(
+      `location IS NOT NULL AND (location::geometry && ST_MakeEnvelope($${p - 3}, $${p - 2}, $${p - 1}, $${p}, 4326))`
+    );
+  }
+
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   const limitClause = filters.limit ? `LIMIT ${Math.min(filters.limit, 1000)}` : 'LIMIT 100';
   const offsetClause = filters.offset ? `OFFSET ${filters.offset}` : '';
@@ -146,6 +156,19 @@ export async function getEvents(filters: EventFilter = {}, pool: Pool = getPool(
 
   const result = await pool.query(query, params);
   return result.rows;
+}
+
+export async function getEventById(id: string, pool: Pool = getPool()): Promise<DbEvent | null> {
+  const query = `
+    SELECT id, source, source_id, category, title, severity, started_at, ended_at,
+           ST_Y(location::geometry) as latitude,
+           ST_X(location::geometry) as longitude,
+           payload, fetched_at
+    FROM events
+    WHERE id = $1;
+  `;
+  const result = await pool.query(query, [id]);
+  return result.rows[0] || null;
 }
 
 export async function getEventsNearby(
@@ -172,3 +195,22 @@ export async function getEventsNearby(
   const result = await pool.query(query, [lng, lat, radiusMeters, limit]);
   return result.rows;
 }
+
+export async function getSpaceWeatherStats(
+  days = 30,
+  pool: Pool = getPool()
+): Promise<DbSpaceWeatherStat[]> {
+  const query = `
+    SELECT TO_CHAR(started_at, 'YYYY-MM-DD') as date,
+           COALESCE(severity, 'Unknown') as flare_class,
+           COUNT(*)::int as count
+    FROM events
+    WHERE category = 'solar_flare'
+      AND started_at >= NOW() - ($1 || ' days')::interval
+    GROUP BY TO_CHAR(started_at, 'YYYY-MM-DD'), COALESCE(severity, 'Unknown')
+    ORDER BY date ASC, flare_class ASC;
+  `;
+  const result = await pool.query(query, [days]);
+  return result.rows;
+}
+
