@@ -1,6 +1,5 @@
 import request from 'supertest';
 import { createApp } from '../src/app';
-import * as db from '@mission-control/db';
 
 jest.mock('@mission-control/db', () => ({
   ...jest.requireActual('@mission-control/db'),

@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@mission-control/db": ["packages/db/src/index.ts"],
+      "@mission-control/nasa-client": ["packages/nasa-client/src/index.ts"],
+      "@mission-control/alert-service": ["services/alert-service/src/index.ts"],
+      "@mission-control/api-service": ["services/api-service/src/index.ts"],
+      "@mission-control/ingestion-service": ["services/ingestion-service/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*",
+    "packages/*/tests/**/*",
+    "services/*/src/**/*",
+    "services/*/tests/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/dist"
+  ]
+}

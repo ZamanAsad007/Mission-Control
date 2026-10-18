@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Read API and gateway service for Mission Control Dashboard",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",

@@ -2,9 +2,9 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import https from 'https';
 import dns from 'dns';
 import { ApodItem, ApodItemSchema } from './schemas/apod';
-import { NearEarthObject, NearEarthObjectSchema, NeoWsFeedResponse, NeoWsFeedSchema } from './schemas/neows';
+import { NearEarthObject, NearEarthObjectSchema } from './schemas/neows';
 import { SolarFlare, SolarFlareSchema, CoronalMassEjection, CoronalMassEjectionSchema } from './schemas/donki';
-import { EonetEvent, EonetEventSchema, EonetResponse, EonetResponseSchema } from './schemas/eonet';
+import { EonetEvent, EonetEventSchema } from './schemas/eonet';
 
 export interface NasaClientOptions {
   apiKey?: string;

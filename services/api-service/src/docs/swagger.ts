@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
 
 export const swaggerSpec = {

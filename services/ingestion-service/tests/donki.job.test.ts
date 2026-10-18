@@ -1,6 +1,5 @@
 import { normalizeSolarFlare, normalizeCme, runDonkiJob } from '../src/jobs/donki.job';
 import * as db from '@mission-control/db';
-import * as publisher from '../src/events/publisher';
 
 jest.mock('@mission-control/db', () => ({
   ...jest.requireActual('@mission-control/db'),
