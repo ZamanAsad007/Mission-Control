@@ -161,4 +161,15 @@ describe('API Service Read Endpoints', () => {
       expect(res.body.jobs.apod_job).toBeDefined();
     });
   });
+
+  describe('Swagger Documentation', () => {
+    it('GET /api/docs.json should return OpenAPI specification', async () => {
+      const res = await request(app).get('/api/docs.json');
+      expect(res.status).toBe(200);
+      expect(res.body.openapi).toBe('3.0.0');
+      expect(res.body.info.title).toBe('Mission Control API');
+      expect(res.body.paths['/apod/today']).toBeDefined();
+    });
+  });
 });
+

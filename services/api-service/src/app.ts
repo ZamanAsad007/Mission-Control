@@ -6,6 +6,7 @@ import { asteroidsRouter } from './routes/asteroids.router';
 import { eventsRouter } from './routes/events.router';
 import { statsRouter } from './routes/stats.router';
 import { healthRouter } from './routes/health.router';
+import { swaggerUiServe, swaggerUiSetup, swaggerSpec } from './docs/swagger';
 
 export function createApp(): Express {
   const app = express();
@@ -16,6 +17,11 @@ export function createApp(): Express {
   // Global rate limiter (100 requests per 15 minutes)
   const limiter = createRateLimiter();
   app.use(limiter);
+
+  // OpenAPI Swagger Documentation at /api/docs and /docs
+  app.use('/api/docs', swaggerUiServe, swaggerUiSetup);
+  app.use('/docs', swaggerUiServe, swaggerUiSetup);
+  app.get('/api/docs.json', (_req, res) => res.json(swaggerSpec));
 
   // Mount API routes under /api
   app.use('/api/apod', apodRouter);
