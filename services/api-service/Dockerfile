@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY packages/db/package*.json ./packages/db/
 COPY packages/nasa-client/package*.json ./packages/nasa-client/
+COPY services/alert-service/package*.json ./services/alert-service/
 COPY services/api-service/package*.json ./services/api-service/
 
 RUN npm ci
@@ -13,10 +14,12 @@ RUN npm ci
 # Copy sources
 COPY tsconfig.json ./
 COPY packages/db ./packages/db
+COPY services/alert-service ./services/alert-service
 COPY services/api-service ./services/api-service
 
 # Build packages and service
 RUN npm run build --workspace=@mission-control/db && \
+    npm run build --workspace=@mission-control/alert-service && \
     npm run build --workspace=@mission-control/api-service
 
 # Production runner
@@ -30,12 +33,14 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY package*.json ./
 COPY packages/db/package*.json ./packages/db/
+COPY services/alert-service/package*.json ./services/alert-service/
 COPY services/api-service/package*.json ./services/api-service/
 
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/packages/db/dist ./packages/db/dist
 COPY --from=builder /app/packages/db/migrations ./packages/db/migrations
+COPY --from=builder /app/services/alert-service/dist ./services/alert-service/dist
 COPY --from=builder /app/services/api-service/dist ./services/api-service/dist
 
 USER appuser
