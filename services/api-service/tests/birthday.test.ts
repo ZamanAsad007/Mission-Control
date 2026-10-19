@@ -19,7 +19,7 @@ jest.mock('@mission-control/db', () => ({
   }),
   upsertApod: jest.fn().mockImplementation((apod) => Promise.resolve(apod)),
   getPool: jest.fn().mockReturnValue({
-    query: jest.fn().mockImplementation((sql, params) => {
+    query: jest.fn().mockImplementation((sql, _params) => {
       if (sql.includes('FROM events')) {
         return Promise.resolve({
           rows: [

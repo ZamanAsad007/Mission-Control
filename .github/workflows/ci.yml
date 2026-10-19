@@ -73,6 +73,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build workspaces
+        run: npm run build
+
       - name: Run monorepo test suites
         env:
           NODE_ENV: test
