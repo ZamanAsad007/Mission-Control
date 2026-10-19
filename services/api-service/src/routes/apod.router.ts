@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { getApodByDate, getLatestApod, getPool } from '@mission-control/db';
+import { getPool } from '@mission-control/db';
 import { cacheMiddleware } from '../middleware/cache.middleware';
+import { resolveApod } from '../services/apod.service';
 
 export const apodRouter = Router();
 
@@ -10,12 +11,8 @@ apodRouter.use(cacheMiddleware(6 * 3600, 'apod'));
 // GET /api/apod/today
 apodRouter.get('/today', async (_req: Request, res: Response) => {
   try {
-    const today = new Date().toISOString().slice(0, 10);
     const pool = getPool();
-    let apod = await getApodByDate(today, pool);
-    if (!apod) {
-      apod = await getLatestApod(pool);
-    }
+    const apod = await resolveApod(undefined, pool);
 
     if (!apod) {
       return res.status(404).json({
@@ -45,23 +42,15 @@ apodRouter.get('/', async (req: Request, res: Response) => {
     const date = req.query.date as string | undefined;
     const pool = getPool();
 
-    let apod;
-    if (date) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return res.status(400).json({
-          success: false,
-          data: null,
-          error: 'Invalid date format, expected YYYY-MM-DD',
-        });
-      }
-      apod = await getApodByDate(date, pool);
-    } else {
-      const today = new Date().toISOString().slice(0, 10);
-      apod = await getApodByDate(today, pool);
-      if (!apod) {
-        apod = await getLatestApod(pool);
-      }
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: 'Invalid date format, expected YYYY-MM-DD',
+      });
     }
+
+    const apod = await resolveApod(date, pool);
 
     if (!apod) {
       return res.status(404).json({
