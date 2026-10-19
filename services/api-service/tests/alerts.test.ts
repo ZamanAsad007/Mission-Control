@@ -363,5 +363,23 @@ describe('Alert Rules & History Endpoints', () => {
       expect(res.body.success).toBe(false);
       expect(res.body.error).toContain('No active notification destinations configured');
     });
+
+    it('returns 400 if requested channel destination is not configured on profile', async () => {
+      (db.getUserById as jest.Mock).mockResolvedValue({
+        id: userId,
+        email: 'commander@nasa.gov',
+        telegram_chat_id: null,
+        discord_webhook: null,
+      });
+
+      const res = await request(app)
+        .post('/api/alerts/test')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ channel: 'telegram' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toContain('No destination configured for telegram');
+    });
   });
 });

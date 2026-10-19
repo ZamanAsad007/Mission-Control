@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User } from '@/types';
-import { getAuthToken, setAuthToken, apiGetMe, apiLogin, apiRegister } from '@/lib/api';
+import { getAuthToken, setAuthToken, apiGetMe, apiLogin, apiRegister, apiUpdateProfile } from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, options?: { telegram_chat_id?: string; discord_webhook?: string }) => Promise<void>;
+  updateProfile: (data: { telegram_chat_id?: string | null; discord_webhook?: string | null }) => Promise<User>;
   logout: () => void;
 }
 
@@ -70,6 +71,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfile = async (data: {
+    telegram_chat_id?: string | null;
+    discord_webhook?: string | null;
+  }) => {
+    const res = await apiUpdateProfile(data);
+    if (res.success && res.data) {
+      setUser(res.data);
+      return res.data;
+    } else {
+      throw new Error(res.error || 'Failed to update profile');
+    }
+  };
+
   const logout = () => {
     setAuthToken(null);
     setToken(null);
@@ -85,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         register,
+        updateProfile,
         logout,
       }}
     >

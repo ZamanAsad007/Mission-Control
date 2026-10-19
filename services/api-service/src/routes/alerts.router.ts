@@ -337,6 +337,27 @@ alertsRouter.post('/test', async (req: Request, res: Response) => {
       results.push(result);
     }
 
+    const allFailed = results.length > 0 && results.every((r) => !r.success);
+    if (channel && results[0] && !results[0].success) {
+      return res.status(400).json({
+        success: false,
+        data: {
+          results,
+        },
+        error: results[0].error || `Failed to send test alert via ${channel}`,
+      });
+    }
+
+    if (allFailed) {
+      return res.status(400).json({
+        success: false,
+        data: {
+          results,
+        },
+        error: results[0]?.error || 'Failed to dispatch test notifications to configured channels',
+      });
+    }
+
     res.json({
       success: true,
       data: {

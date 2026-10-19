@@ -9,6 +9,7 @@ jest.mock('@mission-control/db', () => ({
   createUser: jest.fn(),
   getUserByEmail: jest.fn(),
   getUserById: jest.fn(),
+  updateUserIntegrations: jest.fn(),
   getPool: jest.fn().mockReturnValue({}),
 }));
 
@@ -178,6 +179,64 @@ describe('Auth Endpoints', () => {
       expect(res.status).toBe(404);
       expect(res.body.success).toBe(false);
       expect(res.body.error).toBe('User not found');
+    });
+  });
+
+  describe('PUT /api/auth/profile', () => {
+    it('updates user notification integrations successfully', async () => {
+      const token = signToken({ id: 'usr-123', email: 'astronaut@nasa.gov' });
+      (db.updateUserIntegrations as jest.Mock).mockResolvedValue({
+        id: 'usr-123',
+        email: 'astronaut@nasa.gov',
+        telegram_chat_id: 'chat-888',
+        discord_webhook: 'https://discord.com/api/webhooks/updated',
+        created_at: new Date('2026-10-18T10:00:00Z'),
+      });
+
+      const res = await request(app)
+        .put('/api/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          telegram_chat_id: 'chat-888',
+          discord_webhook: 'https://discord.com/api/webhooks/updated',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.telegram_chat_id).toBe('chat-888');
+      expect(res.body.data.discord_webhook).toBe('https://discord.com/api/webhooks/updated');
+      expect(db.updateUserIntegrations).toHaveBeenCalledWith(
+        'usr-123',
+        {
+          telegram_chat_id: 'chat-888',
+          discord_webhook: 'https://discord.com/api/webhooks/updated',
+        },
+        expect.anything()
+      );
+    });
+
+    it('returns 400 when discord_webhook is an invalid URL format', async () => {
+      const token = signToken({ id: 'usr-123', email: 'astronaut@nasa.gov' });
+
+      const res = await request(app)
+        .put('/api/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          discord_webhook: 'not-a-valid-url',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toContain('Invalid Discord webhook URL');
+    });
+
+    it('returns 401 if unauthenticated', async () => {
+      const res = await request(app).put('/api/auth/profile').send({
+        telegram_chat_id: '12345',
+      });
+
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
     });
   });
 });

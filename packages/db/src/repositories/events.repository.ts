@@ -208,14 +208,22 @@ export async function getSpaceWeatherStats(
   pool: Pool = getPool()
 ): Promise<DbSpaceWeatherStat[]> {
   const query = `
-    SELECT TO_CHAR(started_at, 'YYYY-MM-DD') as date,
-           COALESCE(severity, 'Unknown') as flare_class,
-           COUNT(*)::int as count
-    FROM events
-    WHERE category = 'solar_flare'
-      AND started_at >= NOW() - ($1 || ' days')::interval
-    GROUP BY TO_CHAR(started_at, 'YYYY-MM-DD'), COALESCE(severity, 'Unknown')
-    ORDER BY date ASC, flare_class ASC;
+    SELECT 
+      d.day::date::text as date,
+      COUNT(CASE WHEN e.category = 'solar_flare' AND UPPER(TRIM(COALESCE(e.severity, ''))) LIKE 'C%' THEN 1 END)::int as c_class,
+      COUNT(CASE WHEN e.category = 'solar_flare' AND UPPER(TRIM(COALESCE(e.severity, ''))) LIKE 'M%' THEN 1 END)::int as m_class,
+      COUNT(CASE WHEN e.category = 'solar_flare' AND UPPER(TRIM(COALESCE(e.severity, ''))) LIKE 'X%' THEN 1 END)::int as x_class,
+      COUNT(CASE WHEN e.category = 'solar_flare' THEN 1 END)::int as total_flares,
+      COUNT(CASE WHEN e.category = 'cme' THEN 1 END)::int as cme_count
+    FROM generate_series(
+      CURRENT_DATE - ($1 || ' days')::interval,
+      CURRENT_DATE,
+      '1 day'::interval
+    ) d(day)
+    LEFT JOIN events e ON TO_CHAR(e.started_at, 'YYYY-MM-DD') = TO_CHAR(d.day, 'YYYY-MM-DD')
+      AND e.category IN ('solar_flare', 'cme')
+    GROUP BY d.day::date
+    ORDER BY d.day::date ASC;
   `;
   const result = await pool.query(query, [days]);
   return result.rows;

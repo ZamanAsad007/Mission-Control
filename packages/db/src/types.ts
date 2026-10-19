@@ -49,8 +49,11 @@ export interface DbIngestionRun {
 
 export interface DbSpaceWeatherStat {
   date: string;
-  flare_class: string | null;
-  count: number;
+  c_class: number;
+  m_class: number;
+  x_class: number;
+  total_flares: number;
+  cme_count: number;
 }
 
 export interface DbUser {
