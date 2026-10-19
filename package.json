@@ -5,7 +5,8 @@
   "description": "NASA Space & Earth Events Dashboard monorepo",
   "workspaces": [
     "packages/*",
-    "services/*"
+    "services/*",
+    "frontend"
   ],
   "scripts": {
     "test": "npm run test --workspaces --if-present",
