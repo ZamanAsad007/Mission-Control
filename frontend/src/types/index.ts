@@ -109,3 +109,33 @@ export interface ApiResponse<T> {
     hasMore: boolean;
   };
 }
+
+export interface CosmicProfile {
+  daysAlive: number;
+  earthYears: number;
+  mercuryYears: number;
+  venusYears: number;
+  marsYears: number;
+  jupiterYears: number;
+  saturnYears: number;
+  distanceAroundSunKm: number;
+}
+
+export interface EpicImage {
+  date: string;
+  caption: string;
+  imageUrl: string;
+  coordinates?: {
+    lat: number;
+    lon: number;
+  } | null;
+}
+
+export interface CosmicBirthdayData {
+  date: string;
+  apod: ApodRecord;
+  epic: EpicImage;
+  cosmicProfile: CosmicProfile;
+  anniversaryEvents: MissionEvent[];
+  anniversaryAsteroids: Asteroid[];
+}

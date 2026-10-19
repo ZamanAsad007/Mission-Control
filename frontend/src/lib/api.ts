@@ -199,3 +199,10 @@ export async function sendTestAlert(data: {
     body: JSON.stringify(data),
   });
 }
+
+// Cosmic Birthday
+export async function getBirthdayData(
+  date: string
+): Promise<ApiResponse<import('@/types').CosmicBirthdayData>> {
+  return request<ApiResponse<import('@/types').CosmicBirthdayData>>(`/birthday?date=${date}`);
+}
