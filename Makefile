@@ -1,4 +1,4 @@
-.PHONY: help up down restart build logs ps clean backfill test lint format
+.PHONY: help up down restart build dev logs ps clean backfill test lint format
 
 # Default target
 help:
@@ -7,6 +7,7 @@ help:
 	@echo "  make down        - Stop and remove all containers"
 	@echo "  make restart     - Restart all docker containers"
 	@echo "  make build       - Build docker images"
+	@echo "  make dev         - Start frontend Vite dev server (port 5173)"
 	@echo "  make logs        - Follow logs from all docker containers"
 	@echo "  make ps          - Show status of running containers"
 	@echo "  make clean       - Stop containers and remove volumes"
@@ -26,6 +27,9 @@ restart:
 
 build:
 	docker compose build
+
+dev:
+	npm run dev --workspace=@mission-control/frontend
 
 logs:
 	docker compose logs -f
