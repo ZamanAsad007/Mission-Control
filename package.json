@@ -10,7 +10,9 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=@mission-control/frontend",
-    "test": "npm run test --workspaces --if-present",
+    "build:packages": "npm run build --workspace=@mission-control/db --workspace=@mission-control/nasa-client --workspace=@mission-control/alert-service",
+    "test": "npm run build:packages && npm run test:workspaces",
+    "test:workspaces": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint . --ext .js,.ts",
     "format": "prettier --write \"**/*.{js,ts,json}\"",

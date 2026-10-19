@@ -10,7 +10,7 @@ describe('End-to-End Alert Pipeline Integration Test', () => {
   let sentTelegramMessages: any[] = [];
   let sentEmailMessages: any[] = [];
   let inMemoryDeliveries: any[] = [];
-  let inMemoryRules: any[] = [];
+  const inMemoryRules: any[] = [];
   let currentTimeMs: number;
 
   beforeEach(() => {
@@ -19,6 +19,7 @@ describe('End-to-End Alert Pipeline Integration Test', () => {
     sentTelegramMessages = [];
     sentEmailMessages = [];
     inMemoryDeliveries = [];
+    inMemoryRules.length = 0;
     currentTimeMs = Date.now();
 
     // Configure mock notifiers
