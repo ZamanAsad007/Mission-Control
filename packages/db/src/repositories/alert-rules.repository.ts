@@ -32,7 +32,10 @@ export async function getActiveRules(
   return result.rows;
 }
 
-export async function getRulesByUserId(userId: string, pool: Pool = getPool()): Promise<DbAlertRule[]> {
+export async function getRulesByUserId(
+  userId: string,
+  pool: Pool = getPool()
+): Promise<DbAlertRule[]> {
   const query = `
     SELECT id, user_id, name, type, config, channels, cooldown_minutes, active, created_at
     FROM alert_rules
@@ -123,7 +126,11 @@ export async function updateRule(
   return result.rows[0] || null;
 }
 
-export async function deleteRule(id: string, userId: string, pool: Pool = getPool()): Promise<boolean> {
+export async function deleteRule(
+  id: string,
+  userId: string,
+  pool: Pool = getPool()
+): Promise<boolean> {
   const query = `DELETE FROM alert_rules WHERE id = $1 AND user_id = $2;`;
   const result = await pool.query(query, [id, userId]);
   return (result.rowCount ?? 0) > 0;

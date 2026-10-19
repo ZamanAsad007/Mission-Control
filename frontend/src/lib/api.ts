@@ -82,8 +82,14 @@ export async function getEvents(params?: {
   return request<ApiResponse<MissionEvent[]>>(`/events${qs ? `?${qs}` : ''}`);
 }
 
-export async function getNearbyEvents(lat: number, lng: number, radiusKm: number = 500): Promise<ApiResponse<MissionEvent[]>> {
-  return request<ApiResponse<MissionEvent[]>>(`/events/nearby?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`);
+export async function getNearbyEvents(
+  lat: number,
+  lng: number,
+  radiusKm: number = 500
+): Promise<ApiResponse<MissionEvent[]>> {
+  return request<ApiResponse<MissionEvent[]>>(
+    `/events/nearby?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`
+  );
 }
 
 export async function getEventById(id: string): Promise<ApiResponse<MissionEvent>> {
@@ -106,7 +112,9 @@ export async function getAsteroids(params?: {
 }
 
 // Space Weather Stats
-export async function getSpaceWeatherStats(days: number = 30): Promise<ApiResponse<SpaceWeatherStat[]>> {
+export async function getSpaceWeatherStats(
+  days: number = 30
+): Promise<ApiResponse<SpaceWeatherStat[]>> {
   return request<ApiResponse<SpaceWeatherStat[]>>(`/stats/space-weather?days=${days}`);
 }
 
@@ -116,7 +124,10 @@ export async function getHealth(): Promise<ApiResponse<HealthResponse>> {
 }
 
 // Auth endpoints
-export async function apiLogin(email: string, password: string): Promise<ApiResponse<{ token: string; user: User }>> {
+export async function apiLogin(
+  email: string,
+  password: string
+): Promise<ApiResponse<{ token: string; user: User }>> {
   return request<ApiResponse<{ token: string; user: User }>>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
@@ -150,7 +161,10 @@ export async function createAlertRule(rule: Partial<AlertRule>): Promise<ApiResp
   });
 }
 
-export async function updateAlertRule(id: string, rule: Partial<AlertRule>): Promise<ApiResponse<AlertRule>> {
+export async function updateAlertRule(
+  id: string,
+  rule: Partial<AlertRule>
+): Promise<ApiResponse<AlertRule>> {
   return request<ApiResponse<AlertRule>>(`/alerts/rules/${id}`, {
     method: 'PUT',
     body: JSON.stringify(rule),

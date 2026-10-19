@@ -11,9 +11,7 @@ export function normalizeSolarFlare(flare: SolarFlare): DbEvent {
     source: 'DONKI_FLR',
     source_id: flare.flrID,
     category: 'solar_flare',
-    title: flare.classType
-      ? `Solar Flare (${flare.classType})`
-      : `Solar Flare (${flare.flrID})`,
+    title: flare.classType ? `Solar Flare (${flare.classType})` : `Solar Flare (${flare.flrID})`,
     severity,
     started_at: flare.beginTime,
     ended_at: flare.endTime ?? null,
@@ -25,9 +23,7 @@ export function normalizeSolarFlare(flare: SolarFlare): DbEvent {
 
 export function normalizeCme(cme: CoronalMassEjection): DbEvent {
   // Find the most accurate CME analysis, or fallback to the first one
-  const analysis =
-    cme.cmeAnalyses?.find((a) => a.isMostAccurate) ||
-    cme.cmeAnalyses?.[0];
+  const analysis = cme.cmeAnalyses?.find((a) => a.isMostAccurate) || cme.cmeAnalyses?.[0];
 
   let severity: string | null = null;
   if (analysis) {
@@ -147,19 +143,23 @@ export async function runDonkiJob(
   const cmes = cmesResult.status === 'fulfilled' ? cmesResult.value : [];
 
   if (flaresResult.status === 'rejected') {
-    console.warn(`[DONKI Job] Solar flares unavailable from NASA API: ${flaresResult.reason?.message || flaresResult.reason}`);
+    console.warn(
+      `[DONKI Job] Solar flares unavailable from NASA API: ${flaresResult.reason?.message || flaresResult.reason}`
+    );
   }
   if (cmesResult.status === 'rejected') {
-    console.warn(`[DONKI Job] CMEs unavailable from NASA API: ${cmesResult.reason?.message || cmesResult.reason}`);
+    console.warn(
+      `[DONKI Job] CMEs unavailable from NASA API: ${cmesResult.reason?.message || cmesResult.reason}`
+    );
   }
 
-  let normalizedEvents: DbEvent[] = [
-    ...flares.map(normalizeSolarFlare),
-    ...cmes.map(normalizeCme),
-  ];
+  let normalizedEvents: DbEvent[] = [...flares.map(normalizeSolarFlare), ...cmes.map(normalizeCme)];
 
   let fallbackUsed = false;
-  if (normalizedEvents.length === 0 && (flaresResult.status === 'rejected' || cmesResult.status === 'rejected')) {
+  if (
+    normalizedEvents.length === 0 &&
+    (flaresResult.status === 'rejected' || cmesResult.status === 'rejected')
+  ) {
     console.warn(
       '[DONKI Job] NASA CCMC servers returned 503 (upstream outage). Activating offline fallback space weather dataset.'
     );
@@ -181,7 +181,9 @@ export async function runDonkiJob(
 
   if (redis && result.newEvents.length > 0) {
     await publishEventsCreated(redis, result.newEvents);
-    console.log(`[DONKI Job] Published ${result.newEvents.length} new space weather events to Redis`);
+    console.log(
+      `[DONKI Job] Published ${result.newEvents.length} new space weather events to Redis`
+    );
   }
 
   return {

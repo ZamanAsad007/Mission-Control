@@ -79,7 +79,8 @@ export interface NaturalEventRuleConfig {
   radiusKm?: number;
 }
 
-export type AlertRuleConfig = SolarFlareRuleConfig | AsteroidRuleConfig | NaturalEventRuleConfig | Record<string, any>;
+export type AlertRuleConfig =
+  SolarFlareRuleConfig | AsteroidRuleConfig | NaturalEventRuleConfig | Record<string, any>;
 
 export interface DbAlertRule {
   id?: string;
@@ -102,5 +103,3 @@ export interface DbAlertDelivery {
   sent_at?: Date | string;
   error?: string | null;
 }
-
-

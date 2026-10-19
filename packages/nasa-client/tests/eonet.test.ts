@@ -30,10 +30,7 @@ describe('EONET Endpoint and Schema', () => {
 
     mock.onGet('https://eonet.gsfc.nasa.gov/api/v3/events').reply(200, {
       title: 'EONET Events',
-      events: [
-        eonetFixture.events[0],
-        { id: 'INVALID', broken_event: true },
-      ],
+      events: [eonetFixture.events[0], { id: 'INVALID', broken_event: true }],
     });
 
     const events = await client.getEonetEvents();

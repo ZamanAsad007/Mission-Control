@@ -2,7 +2,10 @@ import { z } from 'zod';
 
 export const SolarFlareSchema = z.object({
   flrID: z.string(),
-  instruments: z.array(z.object({ displayName: z.string() })).optional().nullable(),
+  instruments: z
+    .array(z.object({ displayName: z.string() }))
+    .optional()
+    .nullable(),
   beginTime: z.string(),
   peakTime: z.string().optional().nullable(),
   endTime: z.string().optional().nullable(),
@@ -28,7 +31,10 @@ export const CoronalMassEjectionSchema = z.object({
   startTime: z.string(),
   sourceLocation: z.string().optional().nullable(),
   activeRegionNum: z.number().optional().nullable(),
-  instruments: z.array(z.object({ displayName: z.string() })).optional().nullable(),
+  instruments: z
+    .array(z.object({ displayName: z.string() }))
+    .optional()
+    .nullable(),
   cmeAnalyses: z.array(CmeAnalysisSchema).optional().nullable(),
   linkedEvents: z.array(z.any()).optional().nullable(),
 });

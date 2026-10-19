@@ -110,7 +110,10 @@ export interface EventFilter {
   offset?: number;
 }
 
-export async function getEvents(filters: EventFilter = {}, pool: Pool = getPool()): Promise<DbEvent[]> {
+export async function getEvents(
+  filters: EventFilter = {},
+  pool: Pool = getPool()
+): Promise<DbEvent[]> {
   const conditions: string[] = [];
   const params: any[] = [];
 
@@ -217,4 +220,3 @@ export async function getSpaceWeatherStats(
   const result = await pool.query(query, [days]);
   return result.rows;
 }
-

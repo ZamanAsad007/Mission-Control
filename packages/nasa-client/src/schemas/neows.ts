@@ -24,16 +24,19 @@ export const NearEarthObjectSchema = z.object({
   name: z.string(),
   nasa_jpl_url: z.string().optional().nullable(),
   absolute_magnitude_h: z.number().optional().nullable(),
-  estimated_diameter: z.object({
-    kilometers: z.object({
-      estimated_diameter_min: z.number(),
-      estimated_diameter_max: z.number(),
-    }),
-    meters: z.object({
-      estimated_diameter_min: z.number(),
-      estimated_diameter_max: z.number(),
-    }),
-  }).optional().nullable(),
+  estimated_diameter: z
+    .object({
+      kilometers: z.object({
+        estimated_diameter_min: z.number(),
+        estimated_diameter_max: z.number(),
+      }),
+      meters: z.object({
+        estimated_diameter_min: z.number(),
+        estimated_diameter_max: z.number(),
+      }),
+    })
+    .optional()
+    .nullable(),
   is_potentially_hazardous_asteroid: z.boolean(),
   close_approach_data: z.array(CloseApproachDataSchema).default([]),
   is_sentry_object: z.boolean().optional(),

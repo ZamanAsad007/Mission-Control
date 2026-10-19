@@ -18,4 +18,3 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET || 'mission-control-jwt-secret-key-2026',
 };
-

@@ -87,12 +87,15 @@ export interface SpaceWeatherStat {
 
 export interface HealthResponse {
   status: string;
-  ingestion: Record<string, {
-    last_run: string | null;
-    status: string;
-    error?: string;
-    records_upserted?: number;
-  }>;
+  ingestion: Record<
+    string,
+    {
+      last_run: string | null;
+      status: string;
+      error?: string;
+      records_upserted?: number;
+    }
+  >;
 }
 
 export interface ApiResponse<T> {

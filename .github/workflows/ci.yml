@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code formatting
+        run: npm run format:check
+
+      - name: Lint codebase
+        run: npm run lint
+
+      - name: Build all workspaces
+        run: npm run build
+
+  test:
+    name: Run Test Suites
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: mission_user
+          POSTGRES_PASSWORD: mission_password
+          POSTGRES_DB: mission_control
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U mission_user -d mission_control"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run monorepo test suites
+        env:
+          NODE_ENV: test
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5433
+          POSTGRES_USER: mission_user
+          POSTGRES_PASSWORD: mission_password
+          POSTGRES_DB: mission_control
+          DATABASE_URL: postgresql://mission_user:mission_password@localhost:5433/mission_control
+          REDIS_HOST: localhost
+          REDIS_PORT: 6380
+          REDIS_URL: redis://localhost:6380
+          JWT_SECRET: test-secret-key-ci-32-chars-long!
+        run: npm test
+
+  docker-build:
+    name: Validate Docker Compose Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose config
+        run: docker compose config
+
+      - name: Build all Docker containers
+        run: docker compose build

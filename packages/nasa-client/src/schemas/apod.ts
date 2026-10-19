@@ -11,10 +11,7 @@ export const ApodItemSchema = z.object({
   service_version: z.string().optional(),
 });
 
-export const ApodResponseSchema = z.union([
-  ApodItemSchema,
-  z.array(ApodItemSchema),
-]);
+export const ApodResponseSchema = z.union([ApodItemSchema, z.array(ApodItemSchema)]);
 
 export type ApodItem = z.infer<typeof ApodItemSchema>;
 export type ApodResponse = z.infer<typeof ApodResponseSchema>;

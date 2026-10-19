@@ -57,7 +57,9 @@ describe('NasaClient', () => {
   });
 
   it('should throw an error if max retries are exceeded', async () => {
-    mock.onGet('https://api.nasa.gov/planetary/apod').reply(500, { error: 'Persistent server error' });
+    mock
+      .onGet('https://api.nasa.gov/planetary/apod')
+      .reply(500, { error: 'Persistent server error' });
 
     await expect(client.getApod()).rejects.toThrow();
   });
