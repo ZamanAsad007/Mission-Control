@@ -1,6 +1,8 @@
 import request from 'supertest';
 import { createApp } from '../src/app';
 
+jest.mock('../src/redis');
+
 jest.mock('@mission-control/db', () => ({
   ...jest.requireActual('@mission-control/db'),
   getApodByDate: jest.fn().mockImplementation((date) => {

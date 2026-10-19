@@ -37,7 +37,11 @@ export async function upsertEvents(
         VALUES (
           $1, $2, $3, $4, $5,
           $6, $7,
-          ${hasLocation ? 'ST_SetSRID(ST_MakePoint($8, $9), 4326)::geography' : 'NULL'},
+          CASE 
+            WHEN $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL 
+            THEN ST_SetSRID(ST_MakePoint($8::float8, $9::float8), 4326)::geography 
+            ELSE NULL 
+          END,
           $10, NOW()
         )
         ON CONFLICT (source, source_id) DO UPDATE SET

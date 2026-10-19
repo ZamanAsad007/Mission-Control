@@ -66,10 +66,20 @@ export async function runDonkiJob(
 
   console.log(`[DONKI Job] Fetching space weather from ${startDate} to ${endDate}...`);
 
-  const [flares, cmes] = await Promise.all([
+  const [flaresResult, cmesResult] = await Promise.allSettled([
     client.getDonkiSolarFlares(startDate, endDate),
     client.getDonkiCmes(startDate, endDate),
   ]);
+
+  const flares = flaresResult.status === 'fulfilled' ? flaresResult.value : [];
+  const cmes = cmesResult.status === 'fulfilled' ? cmesResult.value : [];
+
+  if (flaresResult.status === 'rejected') {
+    console.warn(`[DONKI Job] Solar flares unavailable from NASA API: ${flaresResult.reason?.message || flaresResult.reason}`);
+  }
+  if (cmesResult.status === 'rejected') {
+    console.warn(`[DONKI Job] CMEs unavailable from NASA API: ${cmesResult.reason?.message || cmesResult.reason}`);
+  }
 
   const normalizedEvents: DbEvent[] = [
     ...flares.map(normalizeSolarFlare),

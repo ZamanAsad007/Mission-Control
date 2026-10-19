@@ -37,37 +37,57 @@ export async function runBackfill(options?: BackfillOptions): Promise<BackfillRe
   const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   // 1. APOD
-  console.log('\n[1/4] Ingesting APOD...');
-  const apodResult = await runApodJob(client, pool);
-  console.log(`[1/4] APOD done: 1 record (${apodResult.date})`);
+  let apodResult = { count: 0, date: '' };
+  try {
+    console.log('\n[1/4] Ingesting APOD...');
+    apodResult = await runApodJob(client, pool);
+    console.log(`[1/4] APOD done: ${apodResult.count} record (${apodResult.date})`);
+  } catch (err: any) {
+    console.warn(`[1/4] APOD skipped due to error: ${err.message}`);
+  }
 
   // 2. NeoWs
-  console.log('\n[2/4] Ingesting Near-Earth Asteroids (next 7 days)...');
-  const neowsResult = await runNeoWsJob(client, pool, today, sevenDaysLater);
-  console.log(`[2/4] NeoWs done: ${neowsResult.count} asteroids upserted`);
+  let neowsResult = { count: 0, elementCount: 0 };
+  try {
+    console.log('\n[2/4] Ingesting Near-Earth Asteroids (next 7 days)...');
+    neowsResult = await runNeoWsJob(client, pool, today, sevenDaysLater);
+    console.log(`[2/4] NeoWs done: ${neowsResult.count} asteroids upserted`);
+  } catch (err: any) {
+    console.warn(`[2/4] NeoWs skipped due to error: ${err.message}`);
+  }
 
   // 3. DONKI
-  console.log(`\n[3/4] Ingesting DONKI Space Weather (last ${days} days: ${thirtyDaysAgo} to ${today})...`);
-  const donkiResult = await runDonkiJob(client, pool, redis, {
-    startDate: thirtyDaysAgo,
-    endDate: today,
-  });
-  console.log(
-    `[3/4] DONKI done: ${donkiResult.count} events (${donkiResult.flaresCount} flares, ${donkiResult.cmesCount} CMEs, ${donkiResult.newEventsCount} new)`
-  );
+  let donkiResult = { count: 0, flaresCount: 0, cmesCount: 0, newEventsCount: 0 };
+  try {
+    console.log(`\n[3/4] Ingesting DONKI Space Weather (last ${days} days: ${thirtyDaysAgo} to ${today})...`);
+    donkiResult = await runDonkiJob(client, pool, redis, {
+      startDate: thirtyDaysAgo,
+      endDate: today,
+    });
+    console.log(
+      `[3/4] DONKI done: ${donkiResult.count} events (${donkiResult.flaresCount} flares, ${donkiResult.cmesCount} CMEs, ${donkiResult.newEventsCount} new)`
+    );
+  } catch (err: any) {
+    console.warn(`[3/4] DONKI skipped due to NASA API error: ${err.message}`);
+  }
 
   // 4. EONET
-  console.log(`\n[4/4] Ingesting EONET Natural Events (last ${days} days)...`);
-  const eonetResult = await runEonetJob(client, pool, redis, {
-    days,
-    status: 'all',
-  });
-  console.log(`[4/4] EONET done: ${eonetResult.count} events (${eonetResult.newEventsCount} new)`);
+  let eonetResult = { count: 0, newEventsCount: 0 };
+  try {
+    console.log(`\n[4/4] Ingesting EONET Natural Events (last ${days} days)...`);
+    eonetResult = await runEonetJob(client, pool, redis, {
+      days,
+      status: 'all',
+    });
+    console.log(`[4/4] EONET done: ${eonetResult.count} events (${eonetResult.newEventsCount} new)`);
+  } catch (err: any) {
+    console.warn(`[4/4] EONET skipped due to NASA API error: ${err.message}`);
+  }
 
   console.log('\n====================================================');
-  console.log('[Backfill] Historical backfill completed successfully!');
+  console.log('[Backfill] Historical backfill completed!');
   console.log(`Summary:`);
-  console.log(`  - APOD: ${apodResult.count} record (${apodResult.date})`);
+  console.log(`  - APOD: ${apodResult.count} record (${apodResult.date || 'skipped'})`);
   console.log(`  - NeoWs: ${neowsResult.count} asteroids`);
   console.log(`  - DONKI: ${donkiResult.count} space events (${donkiResult.flaresCount} flares, ${donkiResult.cmesCount} CMEs)`);
   console.log(`  - EONET: ${eonetResult.count} natural events`);
