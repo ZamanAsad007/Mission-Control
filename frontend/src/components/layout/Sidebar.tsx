@@ -20,6 +20,7 @@ export const Sidebar: React.FC = () => {
     { name: 'Asteroids', path: '/asteroids', icon: 'radar' },
     { name: 'Space Weather', path: '/space-weather', icon: 'bolt' },
     { name: 'Alerts', path: '/alerts', icon: 'notifications_active' },
+    { name: 'Cosmic Birthday', path: '/birthday', icon: 'cake' },
   ];
 
   const lastRunTime = healthData?.data?.ingestion
