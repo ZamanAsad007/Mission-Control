@@ -80,6 +80,8 @@ services:
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      - api-service
 
   gateway:
     image: nginx:1.27-alpine
