@@ -203,7 +203,7 @@ export class NasaClient {
             ? item.explanation
                 .replace(/<[^>]*>/g, ' ')
                 .replace(/\s+/g, ' ')
-                .replace(/^(Explanation\s*:\s*)+/i, '')
+                .replace(/^(Explanation\s*[:\s]*)+/gi, '')
                 .trim()
             : '';
 

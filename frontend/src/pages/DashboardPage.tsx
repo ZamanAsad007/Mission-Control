@@ -97,6 +97,10 @@ export const DashboardPage: React.FC = () => {
   }, [mergedEvents, searchTerm, selectedCategory]);
 
   const apod = apodData?.data;
+  const apodTitle =
+    !apod?.title || apod.title === 'NASA Science'
+      ? 'Astronomy Picture of the Day'
+      : apod.title;
   const apodHeroBg =
     (apod?.media_type === 'video' ? apod.hd_url : (apod?.hd_url || apod?.url)) ||
     'https://images-assets.nasa.gov/image/PIA12348/PIA12348~orig.jpg';
@@ -131,7 +135,7 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight leading-tight">
-              {apod.title}
+              {apodTitle}
             </h1>
 
             <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl leading-relaxed line-clamp-2 md:line-clamp-3">
@@ -536,7 +540,7 @@ export const DashboardPage: React.FC = () => {
                 <span className="material-symbols-outlined text-[1.5rem] text-primary">
                   satellite_alt
                 </span>
-                <h2 className="font-headline-md text-xl font-bold text-on-surface">{apod.title}</h2>
+                <h2 className="font-headline-md text-xl font-bold text-on-surface">{apodTitle}</h2>
               </div>
               <button
                 onClick={() => setShowApodModal(false)}
@@ -550,14 +554,14 @@ export const DashboardPage: React.FC = () => {
               {apod.media_type === 'video' ? (
                 <iframe
                   src={apod.url}
-                  title={apod.title}
+                  title={apodTitle}
                   className="w-full h-80 md:h-[450px]"
                   allowFullScreen
                 />
               ) : (
                 <img
                   src={apod.hd_url || apod.url}
-                  alt={apod.title}
+                  alt={apodTitle}
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src =
                       'https://images-assets.nasa.gov/image/PIA12348/PIA12348~orig.jpg';

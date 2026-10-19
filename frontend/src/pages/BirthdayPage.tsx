@@ -29,6 +29,10 @@ export const BirthdayPage: React.FC = () => {
   const birthdayData = birthdayRes?.data;
   const profile = birthdayData?.cosmicProfile;
   const apod = birthdayData?.apod;
+  const apodTitle =
+    !apod?.title || apod.title === 'NASA Science'
+      ? 'Astronomy Picture of the Day'
+      : apod.title;
   const epic = birthdayData?.epic;
 
   const presets = [
@@ -270,14 +274,14 @@ export const BirthdayPage: React.FC = () => {
                   {apod.media_type === 'video' ? (
                     <iframe
                       src={apod.url}
-                      title={apod.title}
+                      title={apodTitle}
                       className="w-full h-full border-0"
                       allowFullScreen
                     />
                   ) : (
                     <img
                       src={apod.hd_url || apod.url}
-                      alt={apod.title}
+                      alt={apodTitle}
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).src =
                           'https://images-assets.nasa.gov/image/PIA12348/PIA12348~orig.jpg';
@@ -294,7 +298,7 @@ export const BirthdayPage: React.FC = () => {
 
                 <div className="p-5 flex flex-col gap-2">
                   <h4 className="text-lg font-bold text-on-surface font-headline-sm leading-snug">
-                    {apod.title}
+                    {apodTitle}
                   </h4>
                   <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-6">
                     {apod.explanation}
