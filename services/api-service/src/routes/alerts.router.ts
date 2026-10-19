@@ -19,7 +19,9 @@ export const alertsRouter = Router();
 alertsRouter.use(authMiddleware);
 
 export const SolarFlareConfigSchema = z.object({
-  minClass: z.string().regex(/^[XMCB][0-9]+(\.[0-9]+)?$/, 'Must be a valid solar flare class (e.g. M5, X1)'),
+  minClass: z
+    .string()
+    .regex(/^[XMCB][0-9]+(\.[0-9]+)?$/, 'Must be a valid solar flare class (e.g. M5, X1)'),
 });
 
 export const AsteroidConfigSchema = z.object({
@@ -38,7 +40,9 @@ export const CreateRuleSchema = z.discriminatedUnion('type', [
     name: z.string().min(1, 'Rule name is required'),
     type: z.literal('solar_flare'),
     config: SolarFlareConfigSchema,
-    channels: z.array(z.enum(['telegram', 'discord', 'email'])).min(1, 'At least one channel is required'),
+    channels: z
+      .array(z.enum(['telegram', 'discord', 'email']))
+      .min(1, 'At least one channel is required'),
     cooldown_minutes: z.number().int().min(0).default(60).optional(),
     active: z.boolean().default(true).optional(),
   }),
@@ -46,7 +50,9 @@ export const CreateRuleSchema = z.discriminatedUnion('type', [
     name: z.string().min(1, 'Rule name is required'),
     type: z.literal('asteroid'),
     config: AsteroidConfigSchema,
-    channels: z.array(z.enum(['telegram', 'discord', 'email'])).min(1, 'At least one channel is required'),
+    channels: z
+      .array(z.enum(['telegram', 'discord', 'email']))
+      .min(1, 'At least one channel is required'),
     cooldown_minutes: z.number().int().min(0).default(60).optional(),
     active: z.boolean().default(true).optional(),
   }),
@@ -54,7 +60,9 @@ export const CreateRuleSchema = z.discriminatedUnion('type', [
     name: z.string().min(1, 'Rule name is required'),
     type: z.literal('natural_event'),
     config: NaturalEventConfigSchema,
-    channels: z.array(z.enum(['telegram', 'discord', 'email'])).min(1, 'At least one channel is required'),
+    channels: z
+      .array(z.enum(['telegram', 'discord', 'email']))
+      .min(1, 'At least one channel is required'),
     cooldown_minutes: z.number().int().min(0).default(60).optional(),
     active: z.boolean().default(true).optional(),
   }),
@@ -64,7 +72,10 @@ export const UpdateRuleSchema = z.object({
   name: z.string().min(1).optional(),
   type: z.enum(['solar_flare', 'asteroid', 'natural_event']).optional(),
   config: z.record(z.any()).optional(),
-  channels: z.array(z.enum(['telegram', 'discord', 'email'])).min(1).optional(),
+  channels: z
+    .array(z.enum(['telegram', 'discord', 'email']))
+    .min(1)
+    .optional(),
   cooldown_minutes: z.number().int().min(0).optional(),
   active: z.boolean().optional(),
 });

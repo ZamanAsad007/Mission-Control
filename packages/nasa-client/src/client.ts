@@ -3,7 +3,12 @@ import https from 'https';
 import dns from 'dns';
 import { ApodItem, ApodItemSchema } from './schemas/apod';
 import { NearEarthObject, NearEarthObjectSchema } from './schemas/neows';
-import { SolarFlare, SolarFlareSchema, CoronalMassEjection, CoronalMassEjectionSchema } from './schemas/donki';
+import {
+  SolarFlare,
+  SolarFlareSchema,
+  CoronalMassEjection,
+  CoronalMassEjectionSchema,
+} from './schemas/donki';
 import { EonetEvent, EonetEventSchema } from './schemas/eonet';
 
 export interface NasaClientOptions {
@@ -72,13 +77,19 @@ export class NasaClient {
         const status = err.response?.status;
         const isRateLimit = status === 429;
         const isServerOrNetworkError =
-          !err.response || (status >= 500 && status < 600) || err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT';
+          !err.response ||
+          (status >= 500 && status < 600) ||
+          err.code === 'ECONNABORTED' ||
+          err.code === 'ETIMEDOUT';
 
         if (attempt > this.maxRetries || (!isRateLimit && !isServerOrNetworkError)) {
-          this.logger.error(`[NasaClient] Request failed after ${attempt} attempt(s): ${err.message}`, {
-            url: config.url,
-            status,
-          });
+          this.logger.error(
+            `[NasaClient] Request failed after ${attempt} attempt(s): ${err.message}`,
+            {
+              url: config.url,
+              status,
+            }
+          );
           throw err;
         }
 
@@ -109,14 +120,21 @@ export class NasaClient {
    * Helper to safely validate an array of items with a Zod schema.
    * Bad records are logged and skipped rather than throwing an exception.
    */
-  private filterValidRecords<T>(records: any[], schema: { safeParse: (data: any) => { success: boolean; data?: T; error?: any } }, context: string): T[] {
+  private filterValidRecords<T>(
+    records: any[],
+    schema: { safeParse: (data: any) => { success: boolean; data?: T; error?: any } },
+    context: string
+  ): T[] {
     const valid: T[] = [];
     for (const record of records) {
       const parsed = schema.safeParse(record);
       if (parsed.success && parsed.data !== undefined) {
         valid.push(parsed.data);
       } else {
-        this.logger.warn(`[NasaClient] Skipping invalid record in ${context}:`, parsed.error?.errors);
+        this.logger.warn(
+          `[NasaClient] Skipping invalid record in ${context}:`,
+          parsed.error?.errors
+        );
       }
     }
     return valid;
@@ -135,7 +153,10 @@ export class NasaClient {
 
     const parsed = ApodItemSchema.safeParse(response.data);
     if (!parsed.success) {
-      this.logger.warn('[NasaClient] APOD response did not strictly match schema, attempting fallback', parsed.error);
+      this.logger.warn(
+        '[NasaClient] APOD response did not strictly match schema, attempting fallback',
+        parsed.error
+      );
       if (response.data && typeof response.data === 'object' && response.data.url) {
         return {
           date: response.data.date || new Date().toISOString().slice(0, 10),
@@ -155,7 +176,10 @@ export class NasaClient {
   }
 
   // --- NeoWs: Near Earth Objects Web Service ---
-  public async getNeoWsFeed(startDate: string, endDate: string): Promise<{
+  public async getNeoWsFeed(
+    startDate: string,
+    endDate: string
+  ): Promise<{
     elementCount: number;
     asteroids: NearEarthObject[];
   }> {
@@ -245,7 +269,11 @@ export class NasaClient {
       return [];
     }
 
-    return this.filterValidRecords<CoronalMassEjection>(response.data, CoronalMassEjectionSchema, 'DONKI_CME');
+    return this.filterValidRecords<CoronalMassEjection>(
+      response.data,
+      CoronalMassEjectionSchema,
+      'DONKI_CME'
+    );
   }
 
   // --- EONET: Earth Observatory Natural Event Tracker ---

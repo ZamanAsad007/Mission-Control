@@ -11,7 +11,10 @@ async function main() {
   try {
     await runMigrations();
   } catch (err: any) {
-    console.warn('[API Service] Migration warning (will proceed if DB is already up):', err.message);
+    console.warn(
+      '[API Service] Migration warning (will proceed if DB is already up):',
+      err.message
+    );
   }
 
   // Setup Redis cache invalidation listener for event.created

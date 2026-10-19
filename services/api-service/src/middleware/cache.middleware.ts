@@ -59,12 +59,7 @@ export function cacheMiddleware(ttlSeconds: number, cacheKeyPrefix = 'api') {
 
           // Async save to Redis without blocking client response
           redis
-            .set(
-              cacheKey,
-              JSON.stringify({ body: stringBody, etag }),
-              'EX',
-              ttlSeconds
-            )
+            .set(cacheKey, JSON.stringify({ body: stringBody, etag }), 'EX', ttlSeconds)
             .catch((err) => {
               console.error(`[Cache Error] Failed to store ${cacheKey}:`, err.message);
             });
@@ -84,7 +79,10 @@ export function cacheMiddleware(ttlSeconds: number, cacheKeyPrefix = 'api') {
 /**
  * Invalidate Redis cache keys matching a pattern (e.g. "cache:events:*")
  */
-export async function invalidateCachePattern(pattern: string, redis: Redis = getRedisClient()): Promise<number> {
+export async function invalidateCachePattern(
+  pattern: string,
+  redis: Redis = getRedisClient()
+): Promise<number> {
   try {
     const keys = await redis.keys(pattern);
     if (keys.length > 0) {
@@ -113,7 +111,9 @@ export function setupCacheInvalidationListener(subscriber: Redis = getRedisSubsc
 
   subscriber.on('message', async (channel) => {
     if (channel === 'event.created') {
-      console.log('[Cache Listener] event.created received. Invalidating events and stats cache...');
+      console.log(
+        '[Cache Listener] event.created received. Invalidating events and stats cache...'
+      );
       await Promise.all([
         invalidateCachePattern('cache:events:*'),
         invalidateCachePattern('cache:stats:*'),

@@ -31,14 +31,12 @@ describe('Auth Endpoints', () => {
         created_at: new Date('2026-10-18T10:00:00Z'),
       });
 
-      const res = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'astronaut@nasa.gov',
-          password: 'supersecretpassword',
-          telegram_chat_id: '12345678',
-          discord_webhook: 'https://discord.com/api/webhooks/test',
-        });
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'astronaut@nasa.gov',
+        password: 'supersecretpassword',
+        telegram_chat_id: '12345678',
+        discord_webhook: 'https://discord.com/api/webhooks/test',
+      });
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
@@ -56,12 +54,10 @@ describe('Auth Endpoints', () => {
         password_hash: 'existing_hash',
       });
 
-      const res = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'astronaut@nasa.gov',
-          password: 'supersecretpassword',
-        });
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'astronaut@nasa.gov',
+        password: 'supersecretpassword',
+      });
 
       expect(res.status).toBe(409);
       expect(res.body.success).toBe(false);
@@ -70,12 +66,10 @@ describe('Auth Endpoints', () => {
     });
 
     it('returns 400 for invalid email or short password', async () => {
-      const res = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'not-an-email',
-          password: '123',
-        });
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'not-an-email',
+        password: '123',
+      });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
@@ -95,12 +89,10 @@ describe('Auth Endpoints', () => {
         created_at: new Date('2026-10-18T10:00:00Z'),
       });
 
-      const res = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'astronaut@nasa.gov',
-          password: 'correct_password',
-        });
+      const res = await request(app).post('/api/auth/login').send({
+        email: 'astronaut@nasa.gov',
+        password: 'correct_password',
+      });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -111,12 +103,10 @@ describe('Auth Endpoints', () => {
     it('returns 401 if user does not exist', async () => {
       (db.getUserByEmail as jest.Mock).mockResolvedValue(null);
 
-      const res = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'unknown@nasa.gov',
-          password: 'somepassword',
-        });
+      const res = await request(app).post('/api/auth/login').send({
+        email: 'unknown@nasa.gov',
+        password: 'somepassword',
+      });
 
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
@@ -131,12 +121,10 @@ describe('Auth Endpoints', () => {
         password_hash: hashedPassword,
       });
 
-      const res = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'astronaut@nasa.gov',
-          password: 'wrong_password',
-        });
+      const res = await request(app).post('/api/auth/login').send({
+        email: 'astronaut@nasa.gov',
+        password: 'wrong_password',
+      });
 
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
@@ -155,9 +143,7 @@ describe('Auth Endpoints', () => {
         created_at: new Date('2026-10-18T10:00:00Z'),
       });
 
-      const res = await request(app)
-        .get('/api/auth/me')
-        .set('Authorization', `Bearer ${token}`);
+      const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -187,9 +173,7 @@ describe('Auth Endpoints', () => {
       const token = signToken({ id: 'usr-deleted', email: 'ghost@nasa.gov' });
       (db.getUserById as jest.Mock).mockResolvedValue(null);
 
-      const res = await request(app)
-        .get('/api/auth/me')
-        .set('Authorization', `Bearer ${token}`);
+      const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(404);
       expect(res.body.success).toBe(false);

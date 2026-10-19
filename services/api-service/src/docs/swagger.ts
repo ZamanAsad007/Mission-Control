@@ -90,7 +90,8 @@ export const swaggerSpec = {
           {
             name: 'category',
             in: 'query',
-            description: 'Category filter (solar_flare, cme, wildfires, severeStorms, volcanoes, etc.)',
+            description:
+              'Category filter (solar_flare, cme, wildfires, severeStorms, volcanoes, etc.)',
             schema: { type: 'string' },
           },
           {
@@ -306,7 +307,10 @@ export const swaggerSpec = {
                   name: { type: 'string' },
                   type: { type: 'string', enum: ['solar_flare', 'asteroid', 'natural_event'] },
                   config: { type: 'object' },
-                  channels: { type: 'array', items: { type: 'string', enum: ['telegram', 'discord', 'email'] } },
+                  channels: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['telegram', 'discord', 'email'] },
+                  },
                   cooldown_minutes: { type: 'integer', default: 60 },
                   active: { type: 'boolean', default: true },
                 },

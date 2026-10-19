@@ -8,4 +8,3 @@ export * from './repositories/runs.repository';
 export * from './repositories/users.repository';
 export * from './repositories/alert-rules.repository';
 export * from './repositories/alert-deliveries.repository';
-

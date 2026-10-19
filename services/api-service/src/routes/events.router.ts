@@ -1,5 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { getEvents, getEventsNearby, getEventById, getPool, EventFilter } from '@mission-control/db';
+import {
+  getEvents,
+  getEventsNearby,
+  getEventById,
+  getPool,
+  EventFilter,
+} from '@mission-control/db';
 import { cacheMiddleware } from '../middleware/cache.middleware';
 
 export const eventsRouter = Router();

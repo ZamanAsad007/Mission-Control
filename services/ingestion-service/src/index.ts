@@ -11,7 +11,10 @@ async function main() {
   try {
     await runMigrations();
   } catch (err: any) {
-    console.warn('[Ingestion Service] Migration warning (will proceed if DB is already up):', err.message);
+    console.warn(
+      '[Ingestion Service] Migration warning (will proceed if DB is already up):',
+      err.message
+    );
   }
 
   // Initialize scheduler
@@ -57,5 +60,3 @@ export * from './jobs/neows.job';
 export * from './jobs/donki.job';
 export * from './jobs/eonet.job';
 export * from './events/publisher';
-
-

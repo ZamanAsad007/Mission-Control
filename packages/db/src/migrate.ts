@@ -24,10 +24,15 @@ export async function runMigrations(): Promise<void> {
       throw new Error(`Migrations directory not found at ${migrationsDir}`);
     }
 
-    const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
+    const files = fs
+      .readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort();
 
     for (const file of files) {
-      const existing = await client.query('SELECT 1 FROM schema_migrations WHERE filename = $1', [file]);
+      const existing = await client.query('SELECT 1 FROM schema_migrations WHERE filename = $1', [
+        file,
+      ]);
       if (existing.rows.length === 0) {
         console.log(`[DB Migration] Applying ${file}...`);
         const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');

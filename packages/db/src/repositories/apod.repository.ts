@@ -40,4 +40,3 @@ export async function getLatestApod(pool: Pool = getPool()): Promise<DbApod | nu
   const result = await pool.query('SELECT * FROM apod ORDER BY date DESC LIMIT 1');
   return result.rows[0] || null;
 }
-

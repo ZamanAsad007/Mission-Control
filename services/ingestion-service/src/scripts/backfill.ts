@@ -33,8 +33,12 @@ export async function runBackfill(options?: BackfillOptions): Promise<BackfillRe
 
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
-  const thirtyDaysAgo = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const thirtyDaysAgo = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
 
   // 1. APOD
   let apodResult = { count: 0, date: '' };
@@ -59,7 +63,9 @@ export async function runBackfill(options?: BackfillOptions): Promise<BackfillRe
   // 3. DONKI
   let donkiResult = { count: 0, flaresCount: 0, cmesCount: 0, newEventsCount: 0 };
   try {
-    console.log(`\n[3/4] Ingesting DONKI Space Weather (last ${days} days: ${thirtyDaysAgo} to ${today})...`);
+    console.log(
+      `\n[3/4] Ingesting DONKI Space Weather (last ${days} days: ${thirtyDaysAgo} to ${today})...`
+    );
     donkiResult = await runDonkiJob(client, pool, redis, {
       startDate: thirtyDaysAgo,
       endDate: today,
@@ -79,7 +85,9 @@ export async function runBackfill(options?: BackfillOptions): Promise<BackfillRe
       days,
       status: 'all',
     });
-    console.log(`[4/4] EONET done: ${eonetResult.count} events (${eonetResult.newEventsCount} new)`);
+    console.log(
+      `[4/4] EONET done: ${eonetResult.count} events (${eonetResult.newEventsCount} new)`
+    );
   } catch (err: any) {
     console.warn(`[4/4] EONET skipped due to NASA API error: ${err.message}`);
   }
@@ -89,7 +97,9 @@ export async function runBackfill(options?: BackfillOptions): Promise<BackfillRe
   console.log(`Summary:`);
   console.log(`  - APOD: ${apodResult.count} record (${apodResult.date || 'skipped'})`);
   console.log(`  - NeoWs: ${neowsResult.count} asteroids`);
-  console.log(`  - DONKI: ${donkiResult.count} space events (${donkiResult.flaresCount} flares, ${donkiResult.cmesCount} CMEs)`);
+  console.log(
+    `  - DONKI: ${donkiResult.count} space events (${donkiResult.flaresCount} flares, ${donkiResult.cmesCount} CMEs)`
+  );
   console.log(`  - EONET: ${eonetResult.count} natural events`);
   console.log('====================================================\n');
 

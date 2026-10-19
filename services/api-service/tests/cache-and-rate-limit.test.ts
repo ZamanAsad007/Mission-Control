@@ -55,9 +55,7 @@ describe('Cache Middleware & Rate Limiting', () => {
     it('should return HIT with cached response if key is in Redis', async () => {
       const cachedBody = JSON.stringify({ msg: 'cached hello' });
       const cachedEtag = generateETag(cachedBody);
-      mockRedis.get.mockResolvedValue(
-        JSON.stringify({ body: cachedBody, etag: cachedEtag })
-      );
+      mockRedis.get.mockResolvedValue(JSON.stringify({ body: cachedBody, etag: cachedEtag }));
 
       const app = express();
       app.use(cacheMiddleware(60, 'test'));
@@ -72,17 +70,13 @@ describe('Cache Middleware & Rate Limiting', () => {
     it('should return 304 Not Modified when If-None-Match matches ETag', async () => {
       const cachedBody = JSON.stringify({ msg: 'cached hello' });
       const cachedEtag = generateETag(cachedBody);
-      mockRedis.get.mockResolvedValue(
-        JSON.stringify({ body: cachedBody, etag: cachedEtag })
-      );
+      mockRedis.get.mockResolvedValue(JSON.stringify({ body: cachedBody, etag: cachedEtag }));
 
       const app = express();
       app.use(cacheMiddleware(60, 'test'));
       app.get('/test', (_req, res) => res.json({ msg: 'fresh' }));
 
-      const res = await request(app)
-        .get('/test')
-        .set('If-None-Match', cachedEtag);
+      const res = await request(app).get('/test').set('If-None-Match', cachedEtag);
 
       expect(res.status).toBe(304);
       expect(res.headers['etag']).toBe(cachedEtag);

@@ -1,7 +1,11 @@
 import { upsertApod, getApodByDate } from '../src/repositories/apod.repository';
 import { upsertAsteroids, getAsteroidsByDateRange } from '../src/repositories/asteroids.repository';
 import { upsertEvents, getEventsNearby } from '../src/repositories/events.repository';
-import { startIngestionRun, finishIngestionRun, getLastRuns } from '../src/repositories/runs.repository';
+import {
+  startIngestionRun,
+  finishIngestionRun,
+  getLastRuns,
+} from '../src/repositories/runs.repository';
 
 describe('Database Repositories (Unit with mock Pool)', () => {
   let mockClient: any;
@@ -73,10 +77,10 @@ describe('Database Repositories (Unit with mock Pool)', () => {
       });
 
       const list = await getAsteroidsByDateRange('2026-10-18', '2026-10-25', true, mockPool);
-      expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('hazardous = TRUE'),
-        ['2026-10-18', '2026-10-25']
-      );
+      expect(mockPool.query).toHaveBeenCalledWith(expect.stringContaining('hazardous = TRUE'), [
+        '2026-10-18',
+        '2026-10-25',
+      ]);
       expect(list.length).toBe(1);
     });
   });
@@ -136,11 +140,9 @@ describe('Database Repositories (Unit with mock Pool)', () => {
 
   describe('Ingestion Runs Repository', () => {
     it('should track run start and finish', async () => {
-      mockPool.query
-        .mockResolvedValueOnce({ rows: [{ id: 'run-uuid-1' }] })
-        .mockResolvedValueOnce({
-          rows: [{ id: 'run-uuid-1', status: 'completed', records_upserted: 42 }],
-        });
+      mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'run-uuid-1' }] }).mockResolvedValueOnce({
+        rows: [{ id: 'run-uuid-1', status: 'completed', records_upserted: 42 }],
+      });
 
       const runId = await startIngestionRun('apod_job', mockPool);
       expect(runId).toBe('run-uuid-1');

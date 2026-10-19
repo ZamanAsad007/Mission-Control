@@ -85,19 +85,37 @@ export default {
         'label-caps': ['JetBrains Mono', 'monospace'],
       },
       fontSize: {
-        'data-md': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.02em', fontWeight: '500' }],
+        'data-md': [
+          '0.875rem',
+          { lineHeight: '1.25rem', letterSpacing: '0.02em', fontWeight: '500' },
+        ],
         'body-lg': ['1rem', { lineHeight: '1.6rem', fontWeight: '400' }],
         'headline-sm': ['1.125rem', { lineHeight: '1.5rem', fontWeight: '500' }],
-        'data-lg': ['1.5rem', { lineHeight: '1.75rem', letterSpacing: '-0.02em', fontWeight: '700' }],
-        'title-hud': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.15em', fontWeight: '700' }],
-        'headline-lg': ['2.25rem', { lineHeight: '2.75rem', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'data-lg': [
+          '1.5rem',
+          { lineHeight: '1.75rem', letterSpacing: '-0.02em', fontWeight: '700' },
+        ],
+        'title-hud': [
+          '0.875rem',
+          { lineHeight: '1.25rem', letterSpacing: '0.15em', fontWeight: '700' },
+        ],
+        'headline-lg': [
+          '2.25rem',
+          { lineHeight: '2.75rem', letterSpacing: '-0.01em', fontWeight: '600' },
+        ],
         'headline-md': ['1.5rem', { lineHeight: '2rem', fontWeight: '600' }],
         display: ['3.5rem', { lineHeight: '4rem', letterSpacing: '-0.02em', fontWeight: '700' }],
         'body-sm': ['0.75rem', { lineHeight: '1.2rem', fontWeight: '400' }],
         'body-md': ['0.875rem', { lineHeight: '1.4rem', fontWeight: '400' }],
         'data-sm': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.04em', fontWeight: '400' }],
-        'label-caps': ['0.6875rem', { lineHeight: '0.875rem', letterSpacing: '0.2em', fontWeight: '600' }],
-        'headline-lg-mobile': ['1.75rem', { lineHeight: '2.25rem', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'label-caps': [
+          '0.6875rem',
+          { lineHeight: '0.875rem', letterSpacing: '0.2em', fontWeight: '600' },
+        ],
+        'headline-lg-mobile': [
+          '1.75rem',
+          { lineHeight: '2.25rem', letterSpacing: '-0.01em', fontWeight: '600' },
+        ],
       },
       keyframes: {
         'radar-ping': {

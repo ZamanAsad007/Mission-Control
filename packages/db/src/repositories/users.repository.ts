@@ -20,8 +20,13 @@ export async function createUser(
   return result.rows[0];
 }
 
-export async function getUserByEmail(email: string, pool: Pool = getPool()): Promise<DbUser | null> {
-  const result = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+export async function getUserByEmail(
+  email: string,
+  pool: Pool = getPool()
+): Promise<DbUser | null> {
+  const result = await pool.query('SELECT * FROM users WHERE email = $1', [
+    email.toLowerCase().trim(),
+  ]);
   return result.rows[0] || null;
 }
 

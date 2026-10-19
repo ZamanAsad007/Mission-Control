@@ -55,9 +55,7 @@ describe('SSE Stream Endpoint (/api/stream)', () => {
     const app = createApp();
     const server = app.listen(0, () => {
       const port = (server.address() as any).port;
-      const req = request(`http://localhost:${port}`)
-        .get('/api/stream')
-        .expect(200);
+      const req = request(`http://localhost:${port}`).get('/api/stream').expect(200);
 
       req.buffer(false).parse((res, callback) => {
         let buffer = '';

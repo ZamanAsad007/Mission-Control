@@ -20,19 +20,27 @@ export function useEventStream(options: UseEventStreamOptions = {}) {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
 
-  const addEvent = useCallback((event: MissionEvent) => {
-    setLiveEvents((prev) => {
-      // Deduplicate by id or source_id
-      if (prev.some((e) => e.id === event.id || (e.source === event.source && e.source_id === event.source_id))) {
-        return prev;
+  const addEvent = useCallback(
+    (event: MissionEvent) => {
+      setLiveEvents((prev) => {
+        // Deduplicate by id or source_id
+        if (
+          prev.some(
+            (e) =>
+              e.id === event.id || (e.source === event.source && e.source_id === event.source_id)
+          )
+        ) {
+          return prev;
+        }
+        const updated = [event, ...prev];
+        return updated.slice(0, maxStoredEvents);
+      });
+      if (onNewEvent) {
+        onNewEvent(event);
       }
-      const updated = [event, ...prev];
-      return updated.slice(0, maxStoredEvents);
-    });
-    if (onNewEvent) {
-      onNewEvent(event);
-    }
-  }, [maxStoredEvents, onNewEvent]);
+    },
+    [maxStoredEvents, onNewEvent]
+  );
 
   // Fallback Polling Function
   const pollLatestEvents = useCallback(async () => {

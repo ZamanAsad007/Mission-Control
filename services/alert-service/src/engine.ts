@@ -34,7 +34,11 @@ export class AlertEngine {
       this.pool
     );
 
-    return this.evaluateRules(rules, { type: 'event', data: event }, event.id || `${event.source}:${event.source_id}`);
+    return this.evaluateRules(
+      rules,
+      { type: 'event', data: event },
+      event.id || `${event.source}:${event.source_id}`
+    );
   }
 
   public async processAsteroid(asteroid: DbAsteroid): Promise<number> {
@@ -58,7 +62,9 @@ export class AlertEngine {
       // 2. Cooldown check
       const inCooldown = await isWithinCooldown(rule.id, rule.cooldown_minutes, this.pool);
       if (inCooldown) {
-        console.log(`[AlertEngine] Rule "${rule.name}" is within ${rule.cooldown_minutes}m cooldown. Skipping.`);
+        console.log(
+          `[AlertEngine] Rule "${rule.name}" is within ${rule.cooldown_minutes}m cooldown. Skipping.`
+        );
         continue;
       }
 
@@ -67,7 +73,9 @@ export class AlertEngine {
         // Deduplication check
         const alreadySent = await isAlreadyDelivered(rule.id, eventRef, channel, this.pool);
         if (alreadySent) {
-          console.log(`[AlertEngine] Event ${eventRef} already delivered to ${channel} for rule "${rule.name}". Deduplicating.`);
+          console.log(
+            `[AlertEngine] Event ${eventRef} already delivered to ${channel} for rule "${rule.name}". Deduplicating.`
+          );
           continue;
         }
 
@@ -79,11 +87,16 @@ export class AlertEngine {
 
         const recipient = this.getRecipientForChannel(rule, channel);
         if (!recipient) {
-          console.warn(`[AlertEngine] No recipient configured for channel ${channel} on user ${rule.user_email}`);
+          console.warn(
+            `[AlertEngine] No recipient configured for channel ${channel} on user ${rule.user_email}`
+          );
           continue;
         }
 
-        const notificationPayload: NotificationPayload = this.buildNotificationPayload(payload, recipient);
+        const notificationPayload: NotificationPayload = this.buildNotificationPayload(
+          payload,
+          recipient
+        );
 
         // Retry with exponential backoff
         const deliveryResult = await this.sendWithRetry(notifier, notificationPayload);
@@ -101,9 +114,13 @@ export class AlertEngine {
 
         if (deliveryResult.success) {
           deliveredCount++;
-          console.log(`[AlertEngine] Alert delivered successfully via ${channel} for rule "${rule.name}"`);
+          console.log(
+            `[AlertEngine] Alert delivered successfully via ${channel} for rule "${rule.name}"`
+          );
         } else {
-          console.error(`[AlertEngine] Alert delivery failed via ${channel}: ${deliveryResult.error}`);
+          console.error(
+            `[AlertEngine] Alert delivery failed via ${channel}: ${deliveryResult.error}`
+          );
         }
       }
     }
@@ -135,7 +152,8 @@ export class AlertEngine {
         title: evt.title,
         body: `Detected event category: ${evt.category} from ${evt.source}. Started at: ${evt.started_at}`,
         severity: evt.severity,
-        timestamp: typeof evt.started_at === 'string' ? evt.started_at : evt.started_at.toISOString(),
+        timestamp:
+          typeof evt.started_at === 'string' ? evt.started_at : evt.started_at.toISOString(),
       };
     } else {
       const ast = payload.data;

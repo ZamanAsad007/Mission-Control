@@ -2,10 +2,7 @@ import { Pool } from 'pg';
 import { getPool } from '../client';
 import { DbIngestionRun } from '../types';
 
-export async function startIngestionRun(
-  jobName: string,
-  pool: Pool = getPool()
-): Promise<string> {
+export async function startIngestionRun(jobName: string, pool: Pool = getPool()): Promise<string> {
   const result = await pool.query(
     `INSERT INTO ingestion_runs (job_name, started_at, status, records_upserted)
      VALUES ($1, NOW(), 'running', 0)
@@ -35,9 +32,7 @@ export async function finishIngestionRun(
   return result.rows[0];
 }
 
-export async function getLastRuns(
-  pool: Pool = getPool()
-): Promise<Record<string, DbIngestionRun>> {
+export async function getLastRuns(pool: Pool = getPool()): Promise<Record<string, DbIngestionRun>> {
   const result = await pool.query(`
     SELECT DISTINCT ON (job_name) id, job_name, started_at, finished_at, status, records_upserted, error
     FROM ingestion_runs

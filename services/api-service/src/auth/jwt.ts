@@ -6,7 +6,10 @@ export interface UserJwtPayload {
   email: string;
 }
 
-export function signToken(payload: UserJwtPayload, expiresIn: SignOptions['expiresIn'] = '7d'): string {
+export function signToken(
+  payload: UserJwtPayload,
+  expiresIn: SignOptions['expiresIn'] = '7d'
+): string {
   const options: SignOptions = { expiresIn };
   return jwt.sign(payload, config.jwtSecret, options);
 }

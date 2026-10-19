@@ -29,10 +29,9 @@ describe('DONKI Endpoints and Schemas', () => {
     const client = new NasaClient({ apiKey: 'TEST_KEY' });
     const mock = new MockAdapter((client as any).http);
 
-    mock.onGet('https://api.nasa.gov/DONKI/FLR').reply(200, [
-      donkiFlrFixture[0],
-      { invalid: 'flare' },
-    ]);
+    mock
+      .onGet('https://api.nasa.gov/DONKI/FLR')
+      .reply(200, [donkiFlrFixture[0], { invalid: 'flare' }]);
 
     const flares = await client.getDonkiSolarFlares('2024-05-01', '2024-05-05');
     expect(flares.length).toBe(1);

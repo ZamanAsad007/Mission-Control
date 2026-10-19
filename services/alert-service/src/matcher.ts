@@ -13,7 +13,10 @@ import {
  */
 export function parseFlareClass(flareClass?: string | null): number {
   if (!flareClass) return 0;
-  const match = flareClass.trim().toUpperCase().match(/^([ABCMX])([0-9.]+)?$/);
+  const match = flareClass
+    .trim()
+    .toUpperCase()
+    .match(/^([ABCMX])([0-9.]+)?$/);
   if (!match) return 0;
 
   const letter = match[1];
