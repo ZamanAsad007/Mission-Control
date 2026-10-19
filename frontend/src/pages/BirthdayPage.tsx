@@ -278,6 +278,10 @@ export const BirthdayPage: React.FC = () => {
                     <img
                       src={apod.hd_url || apod.url}
                       alt={apod.title}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          'https://images-assets.nasa.gov/image/PIA12348/PIA12348~orig.jpg';
+                      }}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   )}

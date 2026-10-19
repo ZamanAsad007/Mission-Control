@@ -1,22 +1,13 @@
 import { Router, Request, Response } from 'express';
-import { getApodByDate, upsertApod, getPool } from '@mission-control/db';
+import { getPool } from '@mission-control/db';
 import { cacheMiddleware } from '../middleware/cache.middleware';
 import { config } from '../config';
+import { resolveApod } from '../services/apod.service';
 
 export const birthdayRouter = Router();
 
 // Cache birthday responses for 24 hours (86400s)
 birthdayRouter.use(cacheMiddleware(24 * 3600, 'birthday'));
-
-const FALLBACK_APOD = {
-  title: 'Cosmic Starfield & Deep Space Panorama',
-  explanation:
-    'On this day in cosmic history, deep space telescopes scanned distant nebulae and star clusters, capturing stellar nurseries light years away.',
-  url: 'https://images-assets.nasa.gov/image/PIA12348/PIA12348~orig.jpg',
-  hd_url: 'https://images-assets.nasa.gov/image/PIA12348/PIA12348~orig.jpg',
-  media_type: 'image',
-  copyright: 'NASA/JPL-Caltech',
-};
 
 const FALLBACK_EPIC = {
   date: '2026-10-18 12:00:00',
@@ -67,54 +58,7 @@ birthdayRouter.get('/', async (req: Request, res: Response) => {
     const pool = getPool();
 
     // 1. Resolve APOD
-    let apodData = await getApodByDate(date, pool);
-
-    if (!apodData) {
-      try {
-        const apiKey = config.nasaApiKey || 'DEMO_KEY';
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 6000);
-
-        const response = await fetch(
-          `https://api.nasa.gov/planetary/apod?date=${date}&api_key=${apiKey}`,
-          { signal: controller.signal }
-        );
-        clearTimeout(timeout);
-
-        if (response.ok) {
-          const raw = (await response.json()) as any;
-          if (raw && raw.url) {
-            apodData = await upsertApod(
-              {
-                date: raw.date || date,
-                title: raw.title || 'Untitled',
-                explanation: raw.explanation || '',
-                url: raw.url,
-                hd_url: raw.hdurl || raw.url,
-                media_type: raw.media_type || 'image',
-                copyright: raw.copyright || null,
-              },
-              pool
-            );
-          }
-        }
-      } catch (err: any) {
-        console.warn(`[BirthdayRouter] NASA APOD fetch failed for ${date}:`, err.message);
-      }
-    }
-
-    if (!apodData) {
-      apodData = {
-        date,
-        title: FALLBACK_APOD.title,
-        explanation: FALLBACK_APOD.explanation,
-        url: FALLBACK_APOD.url,
-        hd_url: FALLBACK_APOD.hd_url,
-        media_type: FALLBACK_APOD.media_type,
-        copyright: FALLBACK_APOD.copyright,
-        fetched_at: new Date(),
-      };
-    }
+    const apodData = await resolveApod(date, pool);
 
     // 2. Resolve EPIC Earth Imagery
     let epicData = null;

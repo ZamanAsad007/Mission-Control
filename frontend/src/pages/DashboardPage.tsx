@@ -97,6 +97,9 @@ export const DashboardPage: React.FC = () => {
   }, [mergedEvents, searchTerm, selectedCategory]);
 
   const apod = apodData?.data;
+  const apodHeroBg =
+    (apod?.media_type === 'video' ? apod.hd_url : (apod?.hd_url || apod?.url)) ||
+    'https://images-assets.nasa.gov/image/PIA12348/PIA12348~orig.jpg';
   const asteroids = asteroidsData?.data || [];
   const hazardousCount = asteroids.filter((a) => a.hazardous).length;
 
@@ -109,7 +112,7 @@ export const DashboardPage: React.FC = () => {
         <section className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-surface-container-lowest min-h-[380px] md:min-h-[420px] flex flex-col justify-end p-6 md:p-8 border border-outline-variant/30">
           <div
             className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
-            style={{ backgroundImage: `url('${apod.url}')` }}
+            style={{ backgroundImage: `url('${apodHeroBg}')` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-surface via-surface/40 to-transparent" />
@@ -118,7 +121,9 @@ export const DashboardPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-caps text-label-caps tracking-widest uppercase border border-primary/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                ASTRONOMY PICTURE OF THE DAY · APOD / NASA
+                {apod.media_type === 'video'
+                  ? 'APOD VIDEO BRIEFING · NASA'
+                  : 'ASTRONOMY PICTURE OF THE DAY · APOD / NASA'}
               </span>
               <span className="font-data-sm text-data-sm text-on-surface-variant/80 tracking-wide">
                 {formatDate(apod.date)}
@@ -553,6 +558,10 @@ export const DashboardPage: React.FC = () => {
                 <img
                   src={apod.hd_url || apod.url}
                   alt={apod.title}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      'https://images-assets.nasa.gov/image/PIA12348/PIA12348~orig.jpg';
+                  }}
                   className="w-full h-auto object-contain max-h-[500px]"
                 />
               )}
