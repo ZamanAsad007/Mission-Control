@@ -77,6 +77,7 @@ describe('APOD Service Helper', () => {
         title: 'NASA Science',
         url: 'https://science.nasa.gov/wp-content/themes/nasa-child/assets/images/nasa-logo@2x.png',
       });
+      (db.getLatestApod as jest.Mock).mockResolvedValue(null);
 
       // Mock global fetch to fail
       const originalFetch = global.fetch;

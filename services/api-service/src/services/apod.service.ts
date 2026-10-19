@@ -52,7 +52,7 @@ export async function fetchApodFromWordPress(date?: string): Promise<any | null>
       ? item.explanation
           .replace(/<[^>]*>/g, ' ')
           .replace(/\s+/g, ' ')
-          .replace(/^(Explanation\s*:\s*)+/i, '')
+          .replace(/^(Explanation\s*[:\s]*)+/gi, '')
           .trim()
       : '';
 
@@ -136,6 +136,16 @@ export async function resolveApod(date?: string, pool: Pool = getPool()): Promis
     fresh = await fetchApodFromPlanetary(date);
   }
 
+  // If target date is not yet published by NASA (e.g. timezone difference),
+  // fallback to the latest published APOD rather than placeholder
+  if (!fresh) {
+    const latest = await getLatestApod(pool);
+    if (latest && !isCorruptedApod(latest)) {
+      return latest;
+    }
+    fresh = await fetchApodFromWordPress(undefined);
+  }
+
   // If we fetched a fresh valid record, upsert to database!
   if (fresh) {
     try {
@@ -150,7 +160,7 @@ export async function resolveApod(date?: string, pool: Pool = getPool()): Promis
     }
   }
 
-  // If both failed and we had a record (even if corrupted), fallback rather than returning logo
+  // Final fallback
   const fallback = {
     ...FALLBACK_APOD,
     date: date || new Date().toISOString().slice(0, 10),
