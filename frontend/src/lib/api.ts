@@ -149,6 +149,16 @@ export async function apiGetMe(): Promise<ApiResponse<User>> {
   return request<ApiResponse<User>>('/auth/me');
 }
 
+export async function apiUpdateProfile(data: {
+  telegram_chat_id?: string | null;
+  discord_webhook?: string | null;
+}): Promise<ApiResponse<User>> {
+  return request<ApiResponse<User>>('/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 // Alert rules
 export async function getAlertRules(): Promise<ApiResponse<AlertRule[]>> {
   return request<ApiResponse<AlertRule[]>>('/alerts/rules');
@@ -193,8 +203,18 @@ export async function sendTestAlert(data: {
   channel: 'telegram' | 'discord' | 'email';
   target?: string;
   message?: string;
-}): Promise<ApiResponse<{ message: string; success: boolean }>> {
-  return request<ApiResponse<{ message: string; success: boolean }>>('/alerts/test', {
+}): Promise<
+  ApiResponse<{
+    results: Array<{ channel: string; success: boolean; error?: string }>;
+    message?: string;
+  }>
+> {
+  return request<
+    ApiResponse<{
+      results: Array<{ channel: string; success: boolean; error?: string }>;
+      message?: string;
+    }>
+  >('/alerts/test', {
     method: 'POST',
     body: JSON.stringify(data),
   });

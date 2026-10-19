@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { AlertRule } from '@/types';
 import { createAlertRule, updateAlertRule, deleteAlertRule, sendTestAlert } from '@/lib/api';
 import { kmToLd } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 interface AlertRuleManagerProps {
   rules: AlertRule[];
@@ -18,7 +19,25 @@ export const AlertRuleManager: React.FC<AlertRuleManagerProps> = ({
   initialLat,
   initialLng,
 }) => {
+  const { user, updateProfile } = useAuth();
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+
+  // Operator Integrations State
+  const [telegramChatId, setTelegramChatId] = useState(user?.telegram_chat_id || '');
+  const [discordWebhook, setDiscordWebhook] = useState(user?.discord_webhook || '');
+  const [savingIntegrations, setSavingIntegrations] = useState(false);
+  const [integrationFeedback, setIntegrationFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [testingChannel, setTestingChannel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setTelegramChatId(user.telegram_chat_id || '');
+      setDiscordWebhook(user.discord_webhook || '');
+    }
+  }, [user]);
 
   // Form State
   const [name, setName] = useState('New Alert Trigger');
@@ -158,31 +177,240 @@ export const AlertRuleManager: React.FC<AlertRuleManagerProps> = ({
     }
   };
 
+  const handleSaveIntegrations = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingIntegrations(true);
+    setIntegrationFeedback(null);
+    try {
+      await updateProfile({
+        telegram_chat_id: telegramChatId.trim() || null,
+        discord_webhook: discordWebhook.trim() || null,
+      });
+      setIntegrationFeedback({
+        type: 'success',
+        message: 'Notification destinations updated successfully!',
+      });
+    } catch (err: any) {
+      setIntegrationFeedback({
+        type: 'error',
+        message: err.message || 'Failed to update notification destinations',
+      });
+    } finally {
+      setSavingIntegrations(false);
+    }
+  };
+
   const handleSendTest = async (channel: 'telegram' | 'discord' | 'email') => {
     setTestSending(true);
+    setTestingChannel(channel);
     setFeedback(null);
+    setIntegrationFeedback(null);
     try {
       const res = await sendTestAlert({
         channel,
         message: `[TEST] NASA Mission Control notification test dispatch via ${channel.toUpperCase()}.`,
       });
-      setFeedback({
-        type: 'success',
-        message: res.data?.message || `Test notification dispatched successfully to ${channel}!`,
-      });
+      const result = res.data?.results?.[0];
+      if (result && !result.success) {
+        const errorMsg = result.error || `Failed to dispatch test notification to ${channel}`;
+        setFeedback({ type: 'error', message: errorMsg });
+        setIntegrationFeedback({ type: 'error', message: errorMsg });
+      } else {
+        const successMsg = `Test notification dispatched successfully to ${channel.toUpperCase()}! Check your destination.`;
+        setFeedback({ type: 'success', message: successMsg });
+        setIntegrationFeedback({ type: 'success', message: successMsg });
+      }
       onRefresh();
     } catch (err: any) {
-      setFeedback({
-        type: 'error',
-        message: err.message || `Failed to dispatch test notification to ${channel}`,
-      });
+      const errorMsg = err.message || `Failed to dispatch test notification to ${channel}`;
+      setFeedback({ type: 'error', message: errorMsg });
+      setIntegrationFeedback({ type: 'error', message: errorMsg });
     } finally {
       setTestSending(false);
+      setTestingChannel(null);
     }
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <div className="flex flex-col gap-6">
+      {/* OPERATOR NOTIFICATION DESTINATIONS & INTEGRATIONS */}
+      <div className="p-5 rounded-2xl bg-surface-container-low border border-outline-variant/30 shadow-md flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/20 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined text-[1.25rem]">satellite_alt</span>
+            </div>
+            <div>
+              <h2 className="font-headline-sm text-sm font-semibold text-on-surface">
+                Operator Notification Destinations & Integrations
+              </h2>
+              <p className="font-body-md text-xs text-on-surface-variant">
+                Configure your destination endpoints to receive automated event telemetry alerts
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6875rem] font-label-caps border ${
+                user?.telegram_chat_id
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-surface-container text-on-surface-variant border-outline-variant/30'
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  user?.telegram_chat_id ? 'bg-emerald-400' : 'bg-zinc-500'
+                }`}
+              />
+              Telegram: {user?.telegram_chat_id ? 'Configured' : 'Unset'}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6875rem] font-label-caps border ${
+                user?.discord_webhook
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-surface-container text-on-surface-variant border-outline-variant/30'
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  user?.discord_webhook ? 'bg-emerald-400' : 'bg-zinc-500'
+                }`}
+              />
+              Discord: {user?.discord_webhook ? 'Configured' : 'Unset'}
+            </span>
+          </div>
+        </div>
+
+        {integrationFeedback && (
+          <div
+            className={`p-3 rounded-lg border flex items-center gap-2 font-body-sm text-xs ${
+              integrationFeedback.type === 'success'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-error-container/30 border-error/40 text-error'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[1.125rem]">
+              {integrationFeedback.type === 'success' ? 'check_circle' : 'error'}
+            </span>
+            <span>{integrationFeedback.message}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSaveIntegrations} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          {/* TELEGRAM */}
+          <div className="flex flex-col gap-1.5">
+            <label className="font-label-caps text-xs text-on-surface-variant flex items-center justify-between">
+              <span className="flex items-center gap-1 font-semibold text-primary">
+                <span className="material-symbols-outlined text-[1rem]">send</span>
+                Telegram Chat ID
+              </span>
+              <span className="text-[0.625rem] text-on-surface-variant">e.g. 123456789</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={telegramChatId}
+                onChange={(e) => setTelegramChatId(e.target.value)}
+                placeholder="Enter Telegram Chat ID"
+                className="w-full h-9 px-3 rounded-lg bg-surface-container border border-outline-variant/40 text-on-surface font-mono text-xs focus:outline-none focus:border-primary placeholder:text-on-surface-variant/40"
+              />
+              <button
+                type="button"
+                disabled={testSending}
+                onClick={() => handleSendTest('telegram')}
+                className="px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-[0.6875rem] font-label-caps text-primary whitespace-nowrap transition-all disabled:opacity-50"
+                title="Test Telegram notification"
+              >
+                {testSending && testingChannel === 'telegram' ? 'Testing...' : 'Test'}
+              </button>
+            </div>
+            <p className="text-[0.625rem] text-on-surface-variant">
+              Tip: Chat with{' '}
+              <a
+                href="https://t.me/userinfobot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                @userinfobot
+              </a>{' '}
+              on Telegram to get your numeric Chat ID.
+            </p>
+          </div>
+
+          {/* DISCORD */}
+          <div className="flex flex-col gap-1.5">
+            <label className="font-label-caps text-xs text-on-surface-variant flex items-center justify-between">
+              <span className="flex items-center gap-1 font-semibold text-primary">
+                <span className="material-symbols-outlined text-[1rem]">webhook</span>
+                Discord Webhook URL
+              </span>
+              <span className="text-[0.625rem] text-on-surface-variant">https://discord.com/api/...</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="url"
+                value={discordWebhook}
+                onChange={(e) => setDiscordWebhook(e.target.value)}
+                placeholder="https://discord.com/api/webhooks/..."
+                className="w-full h-9 px-3 rounded-lg bg-surface-container border border-outline-variant/40 text-on-surface font-mono text-xs focus:outline-none focus:border-primary placeholder:text-on-surface-variant/40"
+              />
+              <button
+                type="button"
+                disabled={testSending}
+                onClick={() => handleSendTest('discord')}
+                className="px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-[0.6875rem] font-label-caps text-primary whitespace-nowrap transition-all disabled:opacity-50"
+                title="Test Discord webhook notification"
+              >
+                {testSending && testingChannel === 'discord' ? 'Testing...' : 'Test'}
+              </button>
+            </div>
+            <p className="text-[0.625rem] text-on-surface-variant">
+              Tip: Create webhook in Discord Channel Settings &rarr; Integrations &rarr; Webhooks.
+            </p>
+          </div>
+
+          {/* EMAIL & SAVE BUTTON */}
+          <div className="flex flex-col gap-1.5">
+            <label className="font-label-caps text-xs text-on-surface-variant flex items-center justify-between">
+              <span className="flex items-center gap-1 font-semibold text-primary">
+                <span className="material-symbols-outlined text-[1rem]">mail</span>
+                Operator Email
+              </span>
+              <span className="text-[0.625rem] text-emerald-400 font-mono">Active</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={user?.email || 'N/A'}
+                className="w-full h-9 px-3 rounded-lg bg-surface-container/60 border border-outline-variant/20 text-on-surface-variant font-mono text-xs cursor-not-allowed"
+              />
+              <button
+                type="button"
+                disabled={testSending}
+                onClick={() => handleSendTest('email')}
+                className="px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-[0.6875rem] font-label-caps text-primary whitespace-nowrap transition-all disabled:opacity-50"
+                title="Test Email notification"
+              >
+                {testSending && testingChannel === 'email' ? 'Testing...' : 'Test'}
+              </button>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="submit"
+                disabled={savingIntegrations}
+                className="px-4 py-1.5 rounded-lg bg-primary-container text-on-primary-container font-headline-sm text-xs font-semibold hover:bg-primary transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[1rem]">save</span>
+                <span>{savingIntegrations ? 'Saving...' : 'Save Destinations'}</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       {/* LEFT COLUMN: ACTIVE DISPATCH RULES (5 COLS) */}
       <div className="lg:col-span-5 flex flex-col gap-4">
         <div className="flex items-center justify-between p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
@@ -622,5 +850,6 @@ export const AlertRuleManager: React.FC<AlertRuleManagerProps> = ({
         </form>
       </div>
     </div>
-  );
+  </div>
+);
 };

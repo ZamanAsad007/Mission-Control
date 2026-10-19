@@ -1,6 +1,10 @@
 import { upsertApod, getApodByDate } from '../src/repositories/apod.repository';
 import { upsertAsteroids, getAsteroidsByDateRange } from '../src/repositories/asteroids.repository';
-import { upsertEvents, getEventsNearby } from '../src/repositories/events.repository';
+import {
+  upsertEvents,
+  getEventsNearby,
+  getSpaceWeatherStats,
+} from '../src/repositories/events.repository';
 import {
   startIngestionRun,
   finishIngestionRun,
@@ -135,6 +139,24 @@ describe('Database Repositories (Unit with mock Pool)', () => {
         [-122.6, 45.5, 50000, 10]
       );
       expect(nearby.length).toBe(1);
+    });
+
+    it('should query space weather stats with daily breakdown', async () => {
+      const mockStats = [
+        {
+          date: '2026-10-18',
+          c_class: 2,
+          m_class: 1,
+          x_class: 0,
+          total_flares: 3,
+          cme_count: 1,
+        },
+      ];
+      mockPool.query.mockResolvedValueOnce({ rows: mockStats });
+
+      const stats = await getSpaceWeatherStats(14, mockPool);
+      expect(mockPool.query).toHaveBeenCalledWith(expect.stringContaining('generate_series'), [14]);
+      expect(stats).toEqual(mockStats);
     });
   });
 

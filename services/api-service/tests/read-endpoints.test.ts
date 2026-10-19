@@ -65,9 +65,16 @@ jest.mock('@mission-control/db', () => ({
       longitude: -122.41,
     },
   ]),
-  getSpaceWeatherStats: jest
-    .fn()
-    .mockResolvedValue([{ date: '2026-10-18', flare_class: 'M2.0', count: 1 }]),
+  getSpaceWeatherStats: jest.fn().mockResolvedValue([
+    {
+      date: '2026-10-18',
+      c_class: 0,
+      m_class: 1,
+      x_class: 0,
+      total_flares: 1,
+      cme_count: 0,
+    },
+  ]),
   getLastRuns: jest.fn().mockResolvedValue({
     apod_job: { status: 'completed' },
   }),
@@ -151,7 +158,8 @@ describe('API Service Read Endpoints', () => {
       const res = await request(app).get('/api/stats/space-weather?days=14');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data[0].flare_class).toBe('M2.0');
+      expect(res.body.data[0].m_class).toBe(1);
+      expect(res.body.data[0].total_flares).toBe(1);
     });
   });
 
