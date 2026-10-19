@@ -41,7 +41,7 @@ clean:
 	docker compose down -v
 
 backfill:
-	docker compose exec ingestion-service npm run backfill || docker compose run --rm ingestion-service npm run backfill
+	docker compose exec ingestion-service node services/ingestion-service/dist/scripts/backfill.js || npm run backfill
 
 test:
 	npm test
