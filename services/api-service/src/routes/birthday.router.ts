@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import https from 'https';
 import { getPool } from '@mission-control/db';
 import { cacheMiddleware } from '../middleware/cache.middleware';
 import { config } from '../config';
@@ -9,10 +10,42 @@ export const birthdayRouter = Router();
 // Cache birthday responses for 24 hours (86400s)
 birthdayRouter.use(cacheMiddleware(24 * 3600, 'birthday'));
 
+function fetchJsonWithHttps<T = any>(url: string, timeoutMs = 5000): Promise<T | null> {
+  return new Promise((resolve) => {
+    const req = https.get(url, { family: 4, timeout: timeoutMs }, (res) => {
+      if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+        res.resume();
+        return resolve(null);
+      }
+      let raw = '';
+      res.on('data', (chunk) => {
+        raw += chunk;
+      });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(raw));
+        } catch {
+          resolve(null);
+        }
+      });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+
+    req.on('error', () => {
+      resolve(null);
+    });
+  });
+}
+
 const FALLBACK_EPIC = {
-  date: '2026-10-18 12:00:00',
-  caption: 'Earth as viewed by the NASA DSCOVR Earth Polychromatic Imaging Camera (EPIC)',
-  imageUrl: 'https://epic.gsfc.nasa.gov/archive/natural/2024/01/01/png/epic_1b_20240101003633.png',
+  date: '2024-01-01 00:50:27',
+  caption:
+    'Full-disc sunlit view of Earth captured by NASA DSCOVR Earth Polychromatic Imaging Camera (EPIC) from Lagrange Point 1 (1,000,000 miles away).',
+  imageUrl: 'https://epic.gsfc.nasa.gov/archive/natural/2024/01/01/jpg/epic_1b_20240101005515.jpg',
   coordinates: { lat: 0, lon: 0 },
 };
 
@@ -66,32 +99,48 @@ birthdayRouter.get('/', async (req: Request, res: Response) => {
     // 2. Resolve EPIC Earth Imagery
     let epicData = null;
     try {
-      const apiKey = config.nasaApiKey || 'DEMO_KEY';
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+      let items: any[] | null = null;
 
-      // Attempt exact date
-      const response = await fetch(
-        `https://api.nasa.gov/EPIC/api/natural/date/${date}?api_key=${apiKey}`,
-        { signal: controller.signal }
-      );
-      clearTimeout(timeout);
+      // 1) If date is after DSCOVR first science observations (June 2015), attempt exact date
+      if (date >= '2015-06-13') {
+        items = await fetchJsonWithHttps<any[]>(`https://epic.gsfc.nasa.gov/api/natural/date/${date}`, 4000);
+      }
 
-      if (response.ok) {
-        const items = (await response.json()) as any[];
-        if (Array.isArray(items) && items.length > 0) {
-          const item = items[0];
-          const [y, m, d] = item.date.slice(0, 10).split('-');
-          epicData = {
-            date: item.date,
-            caption: item.caption || 'DSCOVR EPIC Natural Color View of Earth',
-            imageUrl: `https://epic.gsfc.nasa.gov/archive/natural/${y}/${m}/${d}/png/${item.image}.png`,
-            coordinates: item.centroid_coordinates || null,
-          };
+      // 2) If no images for exact date (e.g. before 2015 or satellite was in calibration),
+      // match the birthday's calendar month & day across recent active mission years
+      if (!items || items.length === 0) {
+        const monthDay = date.slice(5); // "MM-DD"
+        for (const year of ['2024', '2023', '2022', '2021']) {
+          items = await fetchJsonWithHttps<any[]>(
+            `https://epic.gsfc.nasa.gov/api/natural/date/${year}-${monthDay}`,
+            3000
+          );
+          if (items && items.length > 0) break;
         }
       }
+
+      // 3) Fallback to the latest available EPIC natural Earth disc observation
+      if (!items || items.length === 0) {
+        items = await fetchJsonWithHttps<any[]>('https://epic.gsfc.nasa.gov/api/natural', 4000);
+      }
+
+      if (Array.isArray(items) && items.length > 0) {
+        const item = items[0];
+        const [y, m, d] = item.date.slice(0, 10).split('-');
+        const isExact = item.date.slice(0, 10) === date;
+        epicData = {
+          date: item.date,
+          caption: isExact
+            ? item.caption || 'DSCOVR EPIC Natural Color View of Earth'
+            : date < '2015-06-13'
+            ? `DSCOVR began operations in 2015. Shown here is Earth as viewed on your birthday date (${date.slice(5)}) by NASA's DSCOVR EPIC observatory from Lagrange Point 1.`
+            : `DSCOVR EPIC natural color observation of planet Earth for calendar date ${date.slice(5)}.`,
+          imageUrl: `https://epic.gsfc.nasa.gov/archive/natural/${y}/${m}/${d}/jpg/${item.image}.jpg`,
+          coordinates: item.centroid_coordinates || null,
+        };
+      }
     } catch (err: any) {
-      console.warn(`[BirthdayRouter] EPIC fetch failed for ${date}:`, err.message);
+      console.warn(`[BirthdayRouter] EPIC fetch warning for ${date}:`, err.message);
     }
 
     if (!epicData) {

@@ -340,9 +340,17 @@ export const BirthdayPage: React.FC = () => {
                     alt="NASA DSCOVR Earth"
                     className="max-h-full object-contain drop-shadow-[0_0_25px_rgba(59,130,246,0.3)] group-hover:scale-105 transition-transform duration-500"
                     onError={(e) => {
-                      // Fallback if image path was not archived
-                      (e.target as HTMLImageElement).src =
-                        'https://epic.gsfc.nasa.gov/archive/natural/2024/01/01/png/epic_1b_20240101003633.png';
+                      // Cascading fallback to verified public NASA assets
+                      const target = e.currentTarget as HTMLImageElement;
+                      if (!target.dataset.fallbackTried) {
+                        target.dataset.fallbackTried = '1';
+                        target.src =
+                          'https://epic.gsfc.nasa.gov/archive/natural/2024/01/01/jpg/epic_1b_20240101005515.jpg';
+                      } else if (target.dataset.fallbackTried === '1') {
+                        target.dataset.fallbackTried = '2';
+                        target.src =
+                          'https://images-assets.nasa.gov/image/PIA18033/PIA18033~orig.jpg';
+                      }
                     }}
                   />
                   <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-[10px] font-title-hud text-emerald-400">
