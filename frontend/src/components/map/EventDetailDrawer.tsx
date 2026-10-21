@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import type { MissionEvent } from '@/types';
 import { CategoryBadge, SeverityBadge } from '@/components/common/Badge';
-import { formatDate, formatRelativeTime } from '@/lib/utils';
+import { formatDate, formatRelativeTime, getEventCoordinates } from '@/lib/utils';
 
 interface EventDetailDrawerProps {
   event: MissionEvent | null;
@@ -17,9 +17,9 @@ export const EventDetailDrawer: React.FC<EventDetailDrawerProps> = ({
 }) => {
   if (!event) return null;
 
-  const [lng, lat] = event.location?.coordinates || [0, 0];
+  const [lng, lat] = getEventCoordinates(event) || [0, 0];
   const payload = event.payload || {};
-  const geometries = payload.geometries || [];
+  const geometries = payload.geometry || payload.geometries || [];
   const sources = payload.sources || [];
 
   return (

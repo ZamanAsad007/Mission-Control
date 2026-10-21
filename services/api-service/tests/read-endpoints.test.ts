@@ -6,15 +6,13 @@ jest.mock('../src/redis');
 jest.mock('@mission-control/db', () => ({
   ...jest.requireActual('@mission-control/db'),
   getApodByDate: jest.fn().mockImplementation((date) => {
-    if (date === '2026-10-18') {
-      return Promise.resolve({
-        date: '2026-10-18',
-        title: 'Galaxy Andromeda',
-        explanation: 'A great spiral galaxy',
-        url: 'https://nasa.gov/apod.jpg',
-      });
-    }
-    return Promise.resolve(null);
+    if (date === 'invalid-date') return Promise.resolve(null);
+    return Promise.resolve({
+      date: date || '2026-10-18',
+      title: 'Galaxy Andromeda',
+      explanation: 'A great spiral galaxy',
+      url: 'https://nasa.gov/apod.jpg',
+    });
   }),
   getLatestApod: jest.fn().mockResolvedValue({
     date: '2026-10-18',

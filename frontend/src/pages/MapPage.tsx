@@ -4,7 +4,18 @@ import { getEvents, getNearbyEvents } from '@/lib/api';
 import { TacticalMap } from '@/components/map/TacticalMap';
 import { MapFilterPanel } from '@/components/map/MapFilterPanel';
 import { EventDetailDrawer } from '@/components/map/EventDetailDrawer';
+import { getEventCoordinates } from '@/lib/utils';
 import type { MissionEvent } from '@/types';
+
+function getNormalizedCategory(category: string): string {
+  const c = (category || '').toLowerCase();
+  if (c.includes('wildfire')) return 'wildfires';
+  if (c.includes('storm')) return 'severeStorms';
+  if (c.includes('volcano')) return 'volcanoes';
+  if (c.includes('ice')) return 'seaLakeIce';
+  if (c.includes('flood')) return 'floods';
+  return c;
+}
 
 export const MapPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -25,7 +36,7 @@ export const MapPage: React.FC = () => {
       const now = Date.now();
       const days = dateRange === '24h' ? 1 : dateRange === '7d' ? 7 : 30;
       const from = new Date(now - days * 86400000).toISOString();
-      return getEvents({ from, limit: 200 });
+      return getEvents({ from, limit: 300 });
     },
     refetchInterval: 60000,
   });
@@ -70,14 +81,14 @@ export const MapPage: React.FC = () => {
 
   const allEvents = useMemo(() => {
     const source = isNearbyMode && nearbyEventsResponse?.data ? nearbyEventsResponse.data : eventsResponse?.data || [];
-    return source.filter((e) => e.location && e.location.coordinates);
+    return source.filter((e) => getEventCoordinates(e) !== null);
   }, [isNearbyMode, nearbyEventsResponse, eventsResponse]);
 
   // Category counts
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { all: allEvents.length };
     allEvents.forEach((evt) => {
-      const cat = evt.category;
+      const cat = getNormalizedCategory(evt.category);
       counts[cat] = (counts[cat] || 0) + 1;
     });
     return counts;
@@ -86,14 +97,16 @@ export const MapPage: React.FC = () => {
   // Filtered events
   const filteredEvents = useMemo(() => {
     return allEvents.filter((evt) => {
-      if (selectedCategory !== 'all' && evt.category !== selectedCategory) {
-        return false;
+      if (selectedCategory !== 'all') {
+        const evtCat = getNormalizedCategory(evt.category);
+        const selCat = getNormalizedCategory(selectedCategory);
+        if (evtCat !== selCat) return false;
       }
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        const matchesTitle = evt.title.toLowerCase().includes(q);
-        const matchesCat = evt.category.toLowerCase().includes(q);
-        const matchesSource = evt.source.toLowerCase().includes(q);
+        const matchesTitle = evt.title?.toLowerCase().includes(q);
+        const matchesCat = evt.category?.toLowerCase().includes(q);
+        const matchesSource = evt.source?.toLowerCase().includes(q);
         if (!matchesTitle && !matchesCat && !matchesSource) return false;
       }
       return true;
@@ -200,6 +213,10 @@ export const MapPage: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-[#38bdf8]" />
               <span className="text-on-surface">Sea Ice</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2dd4bf]" />
+              <span className="text-on-surface">Flood</span>
             </div>
             {userLocation && (
               <div className="flex items-center gap-1.5 col-span-2 pt-1 border-t border-outline-variant/20">

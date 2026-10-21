@@ -114,6 +114,15 @@ export function getCategoryBadge(category: string): {
       icon: 'ac_unit',
     };
   }
+  if (cat.includes('flood')) {
+    return {
+      label: 'Flood',
+      colorClass: 'text-teal-400',
+      bgClass: 'bg-teal-400/10',
+      borderClass: 'border-teal-400/30',
+      icon: 'flood',
+    };
+  }
   if (cat.includes('asteroid')) {
     return {
       label: 'Near-Earth Object',
@@ -130,4 +139,49 @@ export function getCategoryBadge(category: string): {
     borderClass: 'border-primary/30',
     icon: 'flare',
   };
+}
+
+/**
+ * Safely extracts [lng, lat] coordinates from any MissionEvent representation.
+ */
+export function getEventCoordinates(evt?: {
+  latitude?: number | null;
+  longitude?: number | null;
+  location?: { coordinates?: [number, number] | number[] } | null;
+  payload?: any;
+} | null): [number, number] | null {
+  if (!evt) return null;
+
+  // 1. Direct location GeoJSON object
+  if (evt.location?.coordinates && Array.isArray(evt.location.coordinates) && evt.location.coordinates.length >= 2) {
+    const lng = Number(evt.location.coordinates[0]);
+    const lat = Number(evt.location.coordinates[1]);
+    if (!isNaN(lat) && !isNaN(lng)) return [lng, lat];
+  }
+
+  // 2. Direct latitude / longitude properties
+  if (
+    evt.latitude !== null &&
+    evt.latitude !== undefined &&
+    evt.longitude !== null &&
+    evt.longitude !== undefined
+  ) {
+    const lat = Number(evt.latitude);
+    const lng = Number(evt.longitude);
+    if (!isNaN(lat) && !isNaN(lng)) return [lng, lat];
+  }
+
+  // 3. Fallback: payload.geometry (EONET v3 GeoJSON)
+  const geomList = evt.payload?.geometry || evt.payload?.geometries;
+  if (Array.isArray(geomList) && geomList.length > 0) {
+    const latestGeom = geomList[geomList.length - 1];
+    if (latestGeom?.coordinates && Array.isArray(latestGeom.coordinates)) {
+      const coords = latestGeom.coordinates;
+      if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+        return [coords[0], coords[1]];
+      }
+    }
+  }
+
+  return null;
 }

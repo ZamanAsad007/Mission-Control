@@ -61,3 +61,11 @@
 .animate-glow-pulse {
   animation: glow-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* Leaflet custom map markers transparent reset */
+.leaflet-div-icon,
+.custom-map-marker,
+.user-location-marker {
+  background: transparent !important;
+  border: none !important;
+}
