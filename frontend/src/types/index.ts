@@ -22,7 +22,9 @@ export interface MissionEvent {
   severity: string | null;
   started_at: string;
   ended_at: string | null;
-  location: GeoLocation | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  location?: GeoLocation | null;
   payload?: Record<string, any>;
   fetched_at: string;
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { MissionEvent } from '@/types';
+import { getEventCoordinates } from '@/lib/utils';
 
 interface TacticalMapProps {
   events: MissionEvent[];
@@ -20,10 +21,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
+  const userCircleRef = useRef<L.Circle | null>(null);
 
   // Initialize Map
   useEffect(() => {
-    if (!mapContainerRef.current || mapInstanceRef.current) return;
+    if (!mapContainerRef.current) return;
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+    // Clear any residual Leaflet ID from DOM container
+    delete (mapContainerRef.current as any)._leaflet_id;
 
     const map = L.map(mapContainerRef.current, {
       center: [20, 0],
@@ -46,7 +55,19 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
 
+    // Invalidate size to ensure proper tile coverage
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
     return () => {
+      clearTimeout(timer);
+      resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -61,9 +82,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     markersLayer.clearLayers();
 
     events.forEach((evt) => {
-      if (!evt.location || !evt.location.coordinates) return;
+      const coords = getEventCoordinates(evt);
+      if (!coords) return;
 
-      const [lng, lat] = evt.location.coordinates;
+      const [lng, lat] = coords;
       if (typeof lat !== 'number' || typeof lng !== 'number') return;
 
       const isSelected = selectedEvent?.id === evt.id;
@@ -89,6 +111,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         color = '#38bdf8'; // light cyan
         ringColor = 'rgba(56, 189, 248, 0.4)';
         icon = 'ac_unit';
+      } else if (category.includes('flood')) {
+        color = '#2dd4bf'; // teal
+        ringColor = 'rgba(45, 212, 191, 0.4)';
+        icon = 'flood';
       }
 
       const iconHtml = `
@@ -122,14 +148,16 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
   // Center on selected event if changed externally
   useEffect(() => {
-    if (!selectedEvent || !selectedEvent.location || !mapInstanceRef.current) return;
-    const [lng, lat] = selectedEvent.location.coordinates;
+    if (!selectedEvent || !mapInstanceRef.current) return;
+    const coords = getEventCoordinates(selectedEvent);
+    if (!coords) return;
+    const [lng, lat] = coords;
     mapInstanceRef.current.flyTo([lat, lng], Math.max(mapInstanceRef.current.getZoom(), 6), {
       duration: 1.2,
     });
   }, [selectedEvent]);
 
-  // User location marker
+  // User location marker and geofence radar circle
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -137,6 +165,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     if (userMarkerRef.current) {
       userMarkerRef.current.remove();
       userMarkerRef.current = null;
+    }
+    if (userCircleRef.current) {
+      userCircleRef.current.remove();
+      userCircleRef.current = null;
     }
 
     if (userLocation) {
@@ -158,7 +190,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       });
 
       userMarkerRef.current = L.marker([lat, lng], { icon: userIcon }).addTo(map);
-      map.flyTo([lat, lng], 6, { duration: 1.5 });
+
+      // Draw 1,000 km tactical perimeter
+      userCircleRef.current = L.circle([lat, lng], {
+        radius: 1000 * 1000,
+        color: '#22d3ee',
+        weight: 1.5,
+        dashArray: '5, 8',
+        fillColor: '#22d3ee',
+        fillOpacity: 0.05,
+      }).addTo(map);
+
+      map.flyTo([lat, lng], 5, { duration: 1.5 });
     }
   }, [userLocation]);
 

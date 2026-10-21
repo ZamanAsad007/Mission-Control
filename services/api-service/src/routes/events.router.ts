@@ -13,6 +13,25 @@ export const eventsRouter = Router();
 // Cache events for 60 seconds
 eventsRouter.use(cacheMiddleware(60, 'events'));
 
+function formatEvent(evt: any) {
+  if (!evt) return evt;
+  const hasCoords =
+    evt.latitude !== null &&
+    evt.latitude !== undefined &&
+    evt.longitude !== null &&
+    evt.longitude !== undefined;
+
+  return {
+    ...evt,
+    location: hasCoords
+      ? {
+          type: 'Point',
+          coordinates: [Number(evt.longitude), Number(evt.latitude)],
+        }
+      : null,
+  };
+}
+
 // GET /api/events/nearby?lat=&lng=&radiusKm=&limit=
 eventsRouter.get('/nearby', async (req: Request, res: Response) => {
   try {
@@ -47,7 +66,7 @@ eventsRouter.get('/nearby', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: events,
+      data: events.map(formatEvent),
       error: null,
     });
   } catch (err: any) {
@@ -76,7 +95,7 @@ eventsRouter.get('/:id', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: event,
+      data: formatEvent(event),
       error: null,
     });
   } catch (err: any) {
@@ -129,7 +148,7 @@ eventsRouter.get('/', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: events,
+      data: events.map(formatEvent),
       error: null,
     });
   } catch (err: any) {

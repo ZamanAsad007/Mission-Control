@@ -21,10 +21,11 @@ export const MapFilterPanel: React.FC<MapFilterPanelProps> = ({
 }) => {
   const categories = [
     { id: 'all', label: 'All Hazards', icon: 'public', color: 'text-primary' },
-    { id: 'wildfire', label: 'Wildfires', icon: 'local_fire_department', color: 'text-rose-400' },
+    { id: 'wildfires', label: 'Wildfires', icon: 'local_fire_department', color: 'text-rose-400' },
     { id: 'severeStorms', label: 'Severe Storms', icon: 'air', color: 'text-blue-400' },
     { id: 'volcanoes', label: 'Volcanoes', icon: 'volcano', color: 'text-fuchsia-400' },
     { id: 'seaLakeIce', label: 'Sea & Lake Ice', icon: 'ac_unit', color: 'text-cyan-300' },
+    { id: 'floods', label: 'Floods', icon: 'flood', color: 'text-teal-400' },
   ];
 
   return (

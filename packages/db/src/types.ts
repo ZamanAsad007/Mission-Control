@@ -9,6 +9,10 @@ export interface DbEvent {
   ended_at?: Date | string | null;
   latitude?: number | null;
   longitude?: number | null;
+  location?: {
+    type: 'Point';
+    coordinates: [number, number];
+  } | null;
   payload?: Record<string, any>;
   fetched_at?: Date | string;
 }
