@@ -142,80 +142,81 @@ export const AsteroidsPage: React.FC = () => {
       />
 
       {/* Main Content Arena */}
-      {viewMode === '3d' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left/Center: 3D Scene Viewport */}
-          <div className="lg:col-span-8 flex flex-col gap-3 relative">
-            <AsteroidRadar3D
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left/Center: 3D Scene Viewport or Table View */}
+        <div className="lg:col-span-8 flex flex-col gap-3 relative">
+          {viewMode === '3d' ? (
+            <>
+              <AsteroidRadar3D
+                asteroids={displayedAsteroids}
+                selectedAsteroid={selectedAsteroid}
+                onSelectAsteroid={setSelectedAsteroid}
+                onHoverAsteroid={(ast, pos) => {
+                  setHoveredAsteroid(ast);
+                  setHoverPos(pos);
+                }}
+              />
+
+              {/* Hover Tooltip Overlay */}
+              {hoveredAsteroid && hoverPos && (
+                <div
+                  className="fixed z-50 pointer-events-none p-3 rounded-xl bg-surface-container/95 border border-primary/40 backdrop-blur-md shadow-2xl flex flex-col gap-1 -translate-x-1/2 -translate-y-full mb-3"
+                  style={{ left: hoverPos.x, top: hoverPos.y }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-headline-sm text-xs font-bold text-on-surface">
+                      {hoveredAsteroid.name}
+                    </span>
+                    {hoveredAsteroid.hazardous && (
+                      <span className="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-400 font-label-caps text-[0.6rem] font-bold">
+                        PHA
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-[0.6875rem] font-data-sm text-on-surface-variant">
+                    <span>Distance: <b className="text-secondary">{kmToLd(hoveredAsteroid.miss_distance_km)} LD</b></span>
+                    <span>Speed: <b className="text-primary">{Number(hoveredAsteroid.velocity_kps).toFixed(1)} km/s</b></span>
+                  </div>
+                  <span className="text-[0.65rem] font-data-sm text-on-surface-variant/80">
+                    Perigee: {formatDate(hoveredAsteroid.approach_date)}
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <AsteroidTable
               asteroids={displayedAsteroids}
               selectedAsteroid={selectedAsteroid}
               onSelectAsteroid={setSelectedAsteroid}
-              onHoverAsteroid={(ast, pos) => {
-                setHoveredAsteroid(ast);
-                setHoverPos(pos);
-              }}
             />
-
-            {/* Hover Tooltip Overlay */}
-            {hoveredAsteroid && hoverPos && (
-              <div
-                className="fixed z-50 pointer-events-none p-3 rounded-xl bg-surface-container/95 border border-primary/40 backdrop-blur-md shadow-2xl flex flex-col gap-1 -translate-x-1/2 -translate-y-full mb-3"
-                style={{ left: hoverPos.x, top: hoverPos.y }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="font-headline-sm text-xs font-bold text-on-surface">
-                    {hoveredAsteroid.name}
-                  </span>
-                  {hoveredAsteroid.hazardous && (
-                    <span className="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-400 font-label-caps text-[0.6rem] font-bold">
-                      PHA
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 text-[0.6875rem] font-data-sm text-on-surface-variant">
-                  <span>Distance: <b className="text-secondary">{kmToLd(hoveredAsteroid.miss_distance_km)} LD</b></span>
-                  <span>Speed: <b className="text-primary">{Number(hoveredAsteroid.velocity_kps).toFixed(1)} km/s</b></span>
-                </div>
-                <span className="text-[0.65rem] font-data-sm text-on-surface-variant/80">
-                  Perigee: {formatDate(hoveredAsteroid.approach_date)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Inspection Card / Quick Telemetry Matrix */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            {selectedAsteroid ? (
-              <AsteroidInspectionCard
-                asteroid={selectedAsteroid}
-                onClose={() => setSelectedAsteroid(null)}
-              />
-            ) : (
-              <div className="p-6 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col items-center justify-center text-center gap-3 min-h-[300px]">
-                <span className="material-symbols-outlined text-[2.5rem] text-secondary/40">
-                  radar
-                </span>
-                <div className="flex flex-col gap-1">
-                  <h3 className="font-headline-sm text-sm font-semibold text-on-surface">
-                    Target Identification Standby
-                  </h3>
-                  <p className="font-body-sm text-xs text-on-surface-variant max-w-xs">
-                    Click any asteroid in the 3D radar arena or scrub the timeline to inspect physical
-                    properties and impact probabilities.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      ) : (
-        /* Accessible Fallback Table View */
-        <AsteroidTable
-          asteroids={displayedAsteroids}
-          selectedAsteroid={selectedAsteroid}
-          onSelectAsteroid={setSelectedAsteroid}
-        />
-      )}
+
+        {/* Right: Inspection Card / Quick Telemetry Matrix */}
+        <div className="lg:col-span-4 flex flex-col gap-4 lg:sticky lg:top-20">
+          {selectedAsteroid ? (
+            <AsteroidInspectionCard
+              asteroid={selectedAsteroid}
+              onClose={() => setSelectedAsteroid(null)}
+            />
+          ) : (
+            <div className="p-6 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col items-center justify-center text-center gap-3 min-h-[300px]">
+              <span className="material-symbols-outlined text-[2.5rem] text-secondary/40">
+                radar
+              </span>
+              <div className="flex flex-col gap-1">
+                <h3 className="font-headline-sm text-sm font-semibold text-on-surface">
+                  Target Identification Standby
+                </h3>
+                <p className="font-body-sm text-xs text-on-surface-variant max-w-xs">
+                  Click any asteroid in the 3D radar arena or table to inspect physical
+                  properties and impact probabilities.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
