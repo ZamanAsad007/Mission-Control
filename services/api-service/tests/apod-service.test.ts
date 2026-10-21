@@ -91,5 +91,52 @@ describe('APOD Service Helper', () => {
         global.fetch = originalFetch;
       }
     });
+
+    it('fetches fresh APOD from network when date is missing from DB instead of returning stale latest DB record', async () => {
+      // DB has no record for today (2026-10-21), but has older record (2026-10-19)
+      (db.getApodByDate as jest.Mock).mockResolvedValue(null);
+      (db.getLatestApod as jest.Mock).mockResolvedValue({
+        id: 1,
+        date: '2026-10-19',
+        title: 'Old APOD from 2 days ago',
+        url: 'https://example.com/old.jpg',
+      });
+
+      const freshApod = {
+        date: '2026-10-21',
+        title: 'New Ghosts Revealed in Cassiopeia',
+        explanation: 'Faint nebulas in Cassiopeia',
+        url: 'https://example.com/cassiopeia.jpg',
+        hdurl: 'https://example.com/cassiopeia-hd.jpg',
+        media_type: 'image',
+      };
+
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [freshApod],
+      } as any);
+
+      try {
+        const result = await resolveApod('2026-10-21', {} as any);
+        expect(result.title).toBe('New Ghosts Revealed in Cassiopeia');
+        expect(result.date).toBe('2026-10-21');
+        expect(db.upsertApod).toHaveBeenCalled();
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('normalizes Date objects or full ISO strings to YYYY-MM-DD date string', async () => {
+      (db.getApodByDate as jest.Mock).mockResolvedValue({
+        id: 1,
+        date: '2012-08-06T00:00:00.000Z',
+        title: 'Curiosity Rover Landing',
+        url: 'https://example.com/curiosity.jpg',
+      });
+
+      const result = await resolveApod('2012-08-06', {} as any);
+      expect(result.date).toBe('2012-08-06');
+    });
   });
 });

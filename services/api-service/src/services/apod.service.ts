@@ -112,58 +112,70 @@ export async function fetchApodFromPlanetary(date?: string): Promise<any | null>
   }
 }
 
+function toDateString(d: any): string {
+  if (!d) return '';
+  if (d instanceof Date) return d.toISOString().slice(0, 10);
+  return String(d).slice(0, 10);
+}
+
 export async function resolveApod(date?: string, pool: Pool = getPool()): Promise<DbApod> {
-  let apod: DbApod | null = null;
-  if (date) {
-    apod = await getApodByDate(date, pool);
-  } else {
-    const today = new Date().toISOString().slice(0, 10);
-    apod = await getApodByDate(today, pool);
-    if (!apod || isCorruptedApod(apod)) {
-      apod = await getLatestApod(pool);
-    }
-  }
+  const targetDate = date || new Date().toISOString().slice(0, 10);
 
+  // 1. Check if the requested date already exists in the database and is valid
+  let apod: DbApod | null = await getApodByDate(targetDate, pool);
   if (apod && !isCorruptedApod(apod)) {
-    return apod;
+    return {
+      ...apod,
+      date: toDateString(apod.date),
+    };
   }
 
-  // If missing or corrupted, try WordPress REST API first (most reliable)
+  // 2. If missing or corrupted, fetch fresh from WordPress REST API (authoritative APOD source)
   let fresh = await fetchApodFromWordPress(date);
 
-  // If that fails, try planetary/apod
+  // 3. If that fails, try planetary/apod
   if (!fresh) {
     fresh = await fetchApodFromPlanetary(date);
   }
 
-  // If target date is not yet published by NASA (e.g. timezone difference),
-  // fallback to the latest published APOD rather than placeholder
-  if (!fresh) {
-    const latest = await getLatestApod(pool);
-    if (latest && !isCorruptedApod(latest)) {
-      return latest;
-    }
-    fresh = await fetchApodFromWordPress(undefined);
-  }
-
-  // If we fetched a fresh valid record, upsert to database!
-  if (fresh) {
+  // 4. If we fetched a fresh valid record, upsert to database!
+  if (fresh && !isCorruptedApod(fresh)) {
     try {
       const saved = await upsertApod(fresh, pool);
-      return saved;
+      try {
+        const { invalidateCachePattern } = await import('../middleware/cache.middleware');
+        await invalidateCachePattern('cache:apod:*');
+      } catch {
+        // Cache invalidation failure shouldn't block response
+      }
+      return {
+        ...saved,
+        date: toDateString(saved.date),
+      };
     } catch (saveErr: any) {
       console.warn('[ApodService] Failed to upsert fresh APOD:', saveErr.message);
       return {
         ...fresh,
+        date: toDateString(fresh.date),
         fetched_at: new Date(),
       };
     }
   }
 
-  // Final fallback
+  // 5. If fresh fetch failed (e.g. offline, rate limited, or date not published yet):
+  // Fallback to the latest valid APOD in DB
+  const latest = await getLatestApod(pool);
+  if (latest && !isCorruptedApod(latest)) {
+    return {
+      ...latest,
+      date: toDateString(latest.date),
+    };
+  }
+
+  // 6. Ultimate fallback
   const fallback = {
     ...FALLBACK_APOD,
-    date: date || new Date().toISOString().slice(0, 10),
+    date: targetDate,
     fetched_at: new Date(),
   };
 

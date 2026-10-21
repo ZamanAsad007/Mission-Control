@@ -5,11 +5,8 @@ import { resolveApod } from '../services/apod.service';
 
 export const apodRouter = Router();
 
-// Cache APOD responses for 6 hours (21600s)
-apodRouter.use(cacheMiddleware(6 * 3600, 'apod'));
-
-// GET /api/apod/today
-apodRouter.get('/today', async (_req: Request, res: Response) => {
+// GET /api/apod/today - Cache for 30 minutes
+apodRouter.get('/today', cacheMiddleware(1800, 'apod'), async (_req: Request, res: Response) => {
   try {
     const pool = getPool();
     const apod = await resolveApod(undefined, pool);
@@ -36,8 +33,8 @@ apodRouter.get('/today', async (_req: Request, res: Response) => {
   }
 });
 
-// GET /api/apod?date=YYYY-MM-DD
-apodRouter.get('/', async (req: Request, res: Response) => {
+// GET /api/apod?date=YYYY-MM-DD - Cache historical dates for 24 hours
+apodRouter.get('/', cacheMiddleware(24 * 3600, 'apod'), async (req: Request, res: Response) => {
   try {
     const date = req.query.date as string | undefined;
     const pool = getPool();

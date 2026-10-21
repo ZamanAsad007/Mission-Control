@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getBirthdayData } from '@/lib/api';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { formatDate } from '@/lib/utils';
 
 export const BirthdayPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>('2000-01-01');
@@ -266,7 +267,7 @@ export const BirthdayPage: React.FC = () => {
                     </h3>
                   </div>
                   <span className="text-xs font-title-hud text-primary-container px-2 py-0.5 rounded bg-primary-container/10 border border-primary-container/30">
-                    {apod.date}
+                    {formatDate(apod.date)}
                   </span>
                 </div>
 

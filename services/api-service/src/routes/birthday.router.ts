@@ -59,6 +59,9 @@ birthdayRouter.get('/', async (req: Request, res: Response) => {
 
     // 1. Resolve APOD
     const apodData = await resolveApod(date, pool);
+    if (apodData && apodData.date) {
+      apodData.date = String(apodData.date).slice(0, 10);
+    }
 
     // 2. Resolve EPIC Earth Imagery
     let epicData = null;
@@ -124,7 +127,7 @@ birthdayRouter.get('/', async (req: Request, res: Response) => {
       anniversaryEvents = eventsRes.rows;
 
       const asteroidsRes = await pool.query(
-        `SELECT id, neo_id, name, approach_date, hazardous, miss_distance_km, velocity_kps
+        `SELECT neo_id, name, approach_date, hazardous, miss_distance_km, velocity_kps
          FROM asteroids
          WHERE TO_CHAR(approach_date, 'MM-DD') = $1
          ORDER BY approach_date DESC

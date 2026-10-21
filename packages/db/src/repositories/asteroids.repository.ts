@@ -59,6 +59,20 @@ export async function upsertAsteroids(
   }
 }
 
+function normalizeAsteroid(row: any): DbAsteroid {
+  if (!row) return row;
+  const dateStr =
+    row.approach_date instanceof Date
+      ? row.approach_date.toISOString().slice(0, 10)
+      : typeof row.approach_date === 'string'
+      ? row.approach_date.slice(0, 10)
+      : String(row.approach_date);
+  return {
+    ...row,
+    approach_date: dateStr,
+  };
+}
+
 export async function getAsteroidsByDateRange(
   from: string,
   to: string,
@@ -80,5 +94,5 @@ export async function getAsteroidsByDateRange(
   query += ` ORDER BY approach_date ASC, miss_distance_km ASC`;
 
   const result = await pool.query(query, params);
-  return result.rows;
+  return result.rows.map(normalizeAsteroid);
 }

@@ -1,6 +1,9 @@
-import { Pool, PoolConfig } from 'pg';
+import { Pool, PoolConfig, types } from 'pg';
 import path from 'path';
 import dotenv from 'dotenv';
+
+// Parse PostgreSQL DATE (OID 1082) as YYYY-MM-DD string instead of Date object
+types.setTypeParser(1082, (val: string) => val);
 
 dotenv.config();
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });

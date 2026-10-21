@@ -1,7 +1,7 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { getRedisConnection } from './redis';
 import { NasaClient } from '@mission-control/nasa-client';
-import { startIngestionRun, finishIngestionRun, getPool } from '@mission-control/db';
+import { startIngestionRun, finishIngestionRun, getPool, getApodByDate } from '@mission-control/db';
 import { runApodJob } from './jobs/apod.job';
 import { runNeoWsJob } from './jobs/neows.job';
 import { runDonkiJob } from './jobs/donki.job';
@@ -47,6 +47,18 @@ export class IngestionScheduler {
     });
 
     await this.setupRepeatableJobs();
+
+    // Ensure today's APOD is ingested if not already present
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const existingApod = await getApodByDate(today, getPool());
+      if (!existingApod) {
+        console.log(`[Scheduler] APOD for today (${today}) not found in DB. Queuing initial apod_job...`);
+        await this.triggerJob('apod_job', { date: today });
+      }
+    } catch (err: any) {
+      console.warn('[Scheduler] Startup APOD check warning:', err.message);
+    }
   }
 
   public async setupRepeatableJobs(): Promise<void> {
