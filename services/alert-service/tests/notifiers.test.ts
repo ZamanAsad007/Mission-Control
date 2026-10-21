@@ -30,7 +30,8 @@ describe('Notification Channels', () => {
           chat_id: '12345678',
           text: expect.stringContaining('X-Class Solar Flare'),
           parse_mode: 'HTML',
-        })
+        }),
+        expect.anything()
       );
     });
 
@@ -81,7 +82,8 @@ describe('Notification Channels', () => {
               description: 'Asteroid 2026-AB miss distance is 2.5M km.',
             }),
           ],
-        })
+        }),
+        expect.anything()
       );
     });
 

@@ -1,5 +1,22 @@
 import axios from 'axios';
+import https from 'https';
+import dns from 'dns';
 import { Notifier, NotificationPayload, NotificationResult } from './types';
+
+// Force IPv4 lookup to prevent ENETUNREACH in environments without IPv6 routing
+const httpsAgent = new https.Agent({
+  family: 4,
+  keepAlive: true,
+  lookup: (hostname, lookupOptions, callback) => {
+    if (typeof lookupOptions === 'function') {
+      callback = lookupOptions;
+      lookupOptions = { family: 4 };
+    } else {
+      lookupOptions = Object.assign({}, lookupOptions, { family: 4 });
+    }
+    dns.lookup(hostname, lookupOptions, callback);
+  },
+});
 
 export class DiscordNotifier implements Notifier {
   public channel = 'discord' as const;
@@ -42,10 +59,17 @@ export class DiscordNotifier implements Notifier {
         ];
       }
 
-      await axios.post(webhookUrl, {
-        username: 'Mission Control',
-        embeds: [embed],
-      });
+      await axios.post(
+        webhookUrl,
+        {
+          username: 'Mission Control',
+          embeds: [embed],
+        },
+        {
+          httpsAgent,
+          timeout: 10000,
+        }
+      );
 
       return { success: true, channel: 'discord' };
     } catch (err: any) {

@@ -1,6 +1,23 @@
 import axios from 'axios';
+import https from 'https';
+import dns from 'dns';
 import { Notifier, NotificationPayload, NotificationResult } from './types';
 import { config } from '../config';
+
+// Force IPv4 lookup to prevent ENETUNREACH in environments without IPv6 routing
+const httpsAgent = new https.Agent({
+  family: 4,
+  keepAlive: true,
+  lookup: (hostname, lookupOptions, callback) => {
+    if (typeof lookupOptions === 'function') {
+      callback = lookupOptions;
+      lookupOptions = { family: 4 };
+    } else {
+      lookupOptions = Object.assign({}, lookupOptions, { family: 4 });
+    }
+    dns.lookup(hostname, lookupOptions, callback);
+  },
+});
 
 export class TelegramNotifier implements Notifier {
   public channel = 'telegram' as const;
@@ -32,11 +49,18 @@ export class TelegramNotifier implements Notifier {
         payload.severity ? `\n\n<b>Severity:</b> ${payload.severity}` : ''
       }`;
 
-      await axios.post(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
-        chat_id: payload.recipient,
-        text,
-        parse_mode: 'HTML',
-      });
+      await axios.post(
+        `https://api.telegram.org/bot${this.botToken}/sendMessage`,
+        {
+          chat_id: payload.recipient,
+          text,
+          parse_mode: 'HTML',
+        },
+        {
+          httpsAgent,
+          timeout: 10000,
+        }
+      );
 
       return { success: true, channel: 'telegram' };
     } catch (err: any) {

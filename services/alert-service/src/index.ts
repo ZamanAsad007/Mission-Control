@@ -1,6 +1,14 @@
+import dns from 'dns';
 import { AlertEngine } from './engine';
 import { getRedisSubscriber, closeRedis } from './redis';
 import { runMigrations, closePool } from '@mission-control/db';
+
+// Prefer IPv4 to prevent ENETUNREACH in environments without IPv6 routing
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  // Ignore on older node runtimes
+}
 
 async function main() {
   console.log('[Alert Service] Starting Alert Service...');

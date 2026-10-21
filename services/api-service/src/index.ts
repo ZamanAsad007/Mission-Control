@@ -1,8 +1,16 @@
+import dns from 'dns';
 import { createApp } from './app';
 import { runMigrations, closePool } from '@mission-control/db';
 import { closeRedis } from './redis';
 import { setupCacheInvalidationListener } from './middleware/cache.middleware';
 import { config } from './config';
+
+// Prefer IPv4 to prevent ENETUNREACH in environments without IPv6 routing
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  // Ignore on older node runtimes
+}
 
 async function main() {
   console.log('[API Service] Starting API service...');
