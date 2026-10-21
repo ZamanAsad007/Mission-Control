@@ -66,6 +66,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-mission_user}:${POSTGRES_PASSWORD:-mission_password}@postgres:5432/${POSTGRES_DB:-mission_control}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy
