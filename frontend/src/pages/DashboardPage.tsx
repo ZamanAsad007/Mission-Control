@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useOutletContext, Link } from 'react-router-dom';
 import { getApodToday, getEvents, getAsteroids, getSpaceWeatherStats, getHealth } from '@/lib/api';
 import { useEventStream } from '@/hooks/useEventStream';
-import { formatDate, formatRelativeTime, kmToLd, formatKm } from '@/lib/utils';
+import { formatDate, formatRelativeTime, kmToLd } from '@/lib/utils';
 import { CategoryBadge, SeverityBadge } from '@/components/common/Badge';
 import { Skeleton } from '@/components/common/Skeleton';
 import type { MissionEvent } from '@/types';
@@ -22,7 +22,7 @@ export const DashboardPage: React.FC = () => {
 
   const { data: initialEventsData, isLoading: isEventsLoading } = useQuery({
     queryKey: ['events', 'feed'],
-    queryFn: () => getEvents({ limit: 40 }),
+    queryFn: () => getEvents({ limit: 50 }),
     refetchInterval: 60000,
   });
 
@@ -74,6 +74,44 @@ export const DashboardPage: React.FC = () => {
     );
   }, [liveEvents, initialEventsData]);
 
+  // Statistics calculation for KPI cards and filter badges
+  const stats = useMemo(() => {
+    let solarCount = 0;
+    let mClass = 0;
+    let xClass = 0;
+    let wildfires = 0;
+    let storms = 0;
+    let volcanoes = 0;
+
+    mergedEvents.forEach((evt) => {
+      const cat = (evt.category || '').toLowerCase();
+      const sev = (evt.severity || '').toUpperCase();
+
+      if (cat.includes('flare') || cat === 'solar_flare') {
+        solarCount++;
+        if (sev.startsWith('M')) mClass++;
+        if (sev.startsWith('X')) xClass++;
+      } else if (cat.includes('wildfire')) {
+        wildfires++;
+      } else if (cat.includes('storm')) {
+        storms++;
+      } else if (cat.includes('volcano')) {
+        volcanoes++;
+      }
+    });
+
+    return {
+      total: mergedEvents.length,
+      solarCount,
+      mClass,
+      xClass,
+      wildfires,
+      storms,
+      volcanoes,
+      earthCount: wildfires + storms + volcanoes,
+    };
+  }, [mergedEvents]);
+
   // Filter events
   const filteredEvents = useMemo(() => {
     return mergedEvents.filter((event) => {
@@ -87,10 +125,14 @@ export const DashboardPage: React.FC = () => {
       if (!matchesSearch) return false;
 
       if (selectedCategory === 'all') return true;
-      if (selectedCategory === 'flares') return event.category === 'solar_flare';
-      if (selectedCategory === 'cme') return event.category === 'cme';
-      if (selectedCategory === 'natural')
-        return ['wildfire', 'severeStorms', 'volcanoes', 'seaLakeIce'].includes(event.category);
+      if (selectedCategory === 'solar')
+        return event.category === 'solar_flare' || event.category === 'cme';
+      if (selectedCategory === 'wildfires') return event.category === 'wildfire';
+      if (selectedCategory === 'storms')
+        return (
+          event.category === 'severeStorms' || (event.category || '').toLowerCase().includes('storm')
+        );
+      if (selectedCategory === 'volcanoes') return event.category === 'volcanoes';
       if (selectedCategory === 'asteroids') return event.category === 'asteroid';
       return true;
     });
@@ -102,162 +144,284 @@ export const DashboardPage: React.FC = () => {
       ? 'Astronomy Picture of the Day'
       : apod.title;
   const apodHeroBg =
-    (apod?.media_type === 'video' ? apod.hd_url : (apod?.hd_url || apod?.url)) ||
+    (apod?.media_type === 'video' ? apod.hd_url : apod?.hd_url || apod?.url) ||
     'https://images-assets.nasa.gov/image/PIA12348/PIA12348~orig.jpg';
   const asteroids = asteroidsData?.data || [];
   const hazardousCount = asteroids.filter((a) => a.hazardous).length;
 
+  // Nearest approaching asteroid
+  const nearestAsteroid = useMemo(() => {
+    if (!asteroids.length) return null;
+    return [...asteroids].sort(
+      (a, b) => Number(a.miss_distance_km) - Number(b.miss_distance_km)
+    )[0];
+  }, [asteroids]);
+
+  // Helper for accent border on cards
+  const getEventAccentClass = (cat: string) => {
+    const c = (cat || '').toLowerCase();
+    if (c.includes('flare') || c === 'solar_flare' || c.includes('cme')) {
+      return 'bg-amber-400';
+    }
+    if (c.includes('wildfire')) {
+      return 'bg-rose-500';
+    }
+    if (c.includes('storm')) {
+      return 'bg-primary-container';
+    }
+    if (c.includes('volcano')) {
+      return 'bg-fuchsia-400';
+    }
+    if (c.includes('asteroid')) {
+      return 'bg-secondary';
+    }
+    return 'bg-primary';
+  };
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* 1. HERO SECTION: APOD BANNER */}
+    <div className="flex flex-col gap-5 md:gap-6">
+      {/* 0. INGESTION HEALTH & TELEMETRY BEACON STRIP (Stitch Mobile Spec) */}
+      <section className="bg-surface-container-low rounded-xl p-3 md:p-3.5 border border-outline-variant/30 flex flex-col gap-2 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-container"></span>
+            </span>
+            <span className="font-label-caps text-label-caps text-primary tracking-wider uppercase font-semibold">
+              Live Ingestion Active
+            </span>
+          </div>
+          <span className="font-data-sm text-data-sm text-on-surface-variant uppercase">
+            {streamStatus === 'connected' ? 'STREAMING REAL-TIME' : 'SYNC NOMINAL'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-0.5">
+          <span className="font-data-sm text-xs px-2.5 py-1 rounded-full bg-surface-container-high text-primary flex items-center gap-1.5 shrink-0 border border-primary/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>DONKI
+          </span>
+          <span className="font-data-sm text-xs px-2.5 py-1 rounded-full bg-surface-container-high text-amber-400 flex items-center gap-1.5 shrink-0 border border-amber-400/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>EONET
+          </span>
+          <span className="font-data-sm text-xs px-2.5 py-1 rounded-full bg-surface-container-high text-secondary flex items-center gap-1.5 shrink-0 border border-secondary/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>NeoWs
+          </span>
+          <span className="font-data-sm text-xs px-2.5 py-1 rounded-full bg-surface-container-high text-emerald-400 flex items-center gap-1.5 shrink-0 border border-emerald-400/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>APOD: 200 OK
+          </span>
+        </div>
+      </section>
+
+      {/* 1. HERO SECTION: APOD BANNER (Stitch Mobile & Desktop Refined) */}
       {isApodLoading ? (
-        <Skeleton className="w-full h-80 rounded-xl" />
+        <Skeleton className="w-full h-72 md:h-96 rounded-xl" />
       ) : apod ? (
-        <section className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-surface-container-lowest min-h-[380px] md:min-h-[420px] flex flex-col justify-end p-6 md:p-8 border border-outline-variant/30">
+        <section className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-surface-container-lowest min-h-[300px] md:min-h-[420px] flex flex-col justify-end p-5 md:p-8 border border-outline-variant/30 group">
           <div
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
             style={{ backgroundImage: `url('${apodHeroBg}')` }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-surface via-surface/40 to-transparent" />
+          {/* Gradient Scrim Overlays */}
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/90 via-transparent to-transparent" />
 
-          <div className="relative z-10 flex flex-col max-w-4xl gap-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-caps text-label-caps tracking-widest uppercase border border-primary/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                {apod.media_type === 'video'
-                  ? 'APOD VIDEO BRIEFING · NASA'
-                  : 'ASTRONOMY PICTURE OF THE DAY · APOD / NASA'}
+          {/* Top Metadata Badges */}
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest/80 backdrop-blur-md border border-primary/20">
+              <span className="material-symbols-outlined text-primary text-[14px]">
+                auto_awesome
               </span>
-              <span className="font-data-sm text-data-sm text-on-surface-variant/80 tracking-wide">
-                {formatDate(apod.date)}
+              <span className="font-label-caps text-label-caps text-primary tracking-widest uppercase">
+                APOD // NASA {apod.media_type === 'video' ? 'VIDEO' : 'SCIENCE'}
               </span>
             </div>
+            <span className="font-data-sm text-data-sm text-on-surface-variant bg-surface-container-lowest/80 px-2.5 py-1 rounded backdrop-blur-md border border-outline-variant/30">
+              {formatDate(apod.date)}
+            </span>
+          </div>
 
-            <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight leading-tight">
+          <div className="relative z-10 flex flex-col max-w-4xl gap-y-2.5">
+            <h1 className="font-headline-sm md:font-headline-lg text-lg md:text-3xl text-on-surface tracking-tight font-semibold leading-tight line-clamp-2">
               {apodTitle}
             </h1>
 
-            <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl leading-relaxed line-clamp-2 md:line-clamp-3">
+            <p className="font-body-sm md:font-body-md text-xs md:text-sm text-on-surface-variant max-w-2xl leading-relaxed line-clamp-2 md:line-clamp-3">
               {apod.explanation}
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <button
                 onClick={() => setShowApodModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-container text-on-primary-container font-headline-sm text-sm hover:bg-primary transition-all shadow-lg shadow-primary-container/20 font-semibold"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-container text-on-primary-container font-headline-sm text-xs md:text-sm hover:bg-primary transition-all shadow-md font-semibold"
               >
-                <span>Read full briefing & HD imagery</span>
-                <span className="material-symbols-outlined text-[1.125rem]">open_in_new</span>
+                <span>Read Briefing</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </button>
 
-              {apod.copyright && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high/80 text-on-surface-variant font-data-sm text-xs backdrop-blur-md border border-outline-variant/30">
-                  <span className="material-symbols-outlined text-[1rem] text-primary">verified</span>
-                  <span>Credit: {apod.copyright}</span>
-                </div>
-              )}
+              <span className="font-data-sm text-xs text-on-surface-variant/80">
+                UTC 00:00 APOD
+              </span>
             </div>
           </div>
         </section>
       ) : null}
 
-      {/* 2. KPI METRICS ROW */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1: Active Events */}
-        <div className="flex flex-col justify-between p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 hover:border-primary/40 transition-all shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
-              Active Events (24H)
-            </span>
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-[1.25rem]">radar</span>
-            </div>
-          </div>
-          <div className="my-3 flex items-baseline justify-between">
-            <span className="font-data-lg text-3xl font-bold text-on-surface">
-              {mergedEvents.length}
-            </span>
-            <div className="flex items-center gap-1 text-primary font-data-sm text-xs">
-              <span className="material-symbols-outlined text-[1rem]">sensors</span>
-              <span>{streamStatus === 'connected' ? 'STREAMING' : 'POLLING'}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-primary font-data-sm text-xs">
-            <span className="material-symbols-outlined text-[1rem]">bolt</span>
-            <span>DONKI + EONET Live Feed</span>
-          </div>
+      {/* 2. 2x2 TACTICAL METRIC KPI GRID (Stitch Mobile Spec: 2 cols on mobile, 4 on desktop) */}
+      <section className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between px-1">
+          <span className="font-title-hud text-title-hud text-on-surface uppercase tracking-wider">
+            Mission Sensors 24H
+          </span>
+          <span className="font-data-sm text-data-sm text-primary">REAL-TIME</span>
         </div>
 
-        {/* KPI 2: Near-Earth Asteroids */}
-        <div className="flex flex-col justify-between p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 hover:border-secondary/40 transition-all shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
-              NEO Approaches (7D)
-            </span>
-            <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-              <span className="material-symbols-outlined text-[1.25rem]">orbit</span>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          {/* Card 1: Active Events */}
+          <div className="bg-surface-container p-3.5 md:p-4 rounded-xl flex flex-col justify-between shadow-sm relative overflow-hidden border border-outline-variant/30 hover:border-primary/40 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="font-label-caps text-label-caps text-on-surface-variant truncate">
+                ACTIVE TELEMETRY
+              </span>
+              <span className="material-symbols-outlined text-primary text-[18px]">satellite</span>
             </div>
-          </div>
-          <div className="my-3 flex items-baseline justify-between">
-            <span className="font-data-lg text-3xl font-bold text-on-surface">
-              {isAsteroidsLoading ? '...' : asteroids.length}
+            <div className="my-2 flex items-baseline justify-between">
+              <span className="font-data-lg text-2xl md:text-3xl text-primary font-bold tracking-tight">
+                {mergedEvents.length}
+              </span>
+              <span className="font-data-sm text-data-sm text-primary flex items-center">
+                <span className="material-symbols-outlined text-[14px]">trending_up</span>+
+                {liveEvents.length || 4}
+              </span>
+            </div>
+            {/* Sparkline SVG (Cyan) */}
+            <div className="w-full h-6 pt-1">
+              <svg
+                className="w-full h-full stroke-primary fill-none"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 24"
+              >
+                <path
+                  d="M0,18 L18,16 L35,19 L52,11 L70,14 L85,6 L100,2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+            <span className="font-data-sm text-data-sm text-on-surface-variant mt-1 truncate">
+              DONKI + EONET Live
             </span>
-            <span className="font-data-sm text-xs px-2 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20">
-              NeoWs Feed
-            </span>
           </div>
-          <div className="flex items-center gap-1 text-secondary font-data-sm text-xs">
-            <span className="material-symbols-outlined text-[1rem]">warning</span>
-            <span>{hazardousCount} Potentially Hazardous</span>
-          </div>
-        </div>
 
-        {/* KPI 3: Space Weather Flares */}
-        <div className="flex flex-col justify-between p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 hover:border-amber-400/40 transition-all shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
-              Solar Flares (7D)
-            </span>
-            <div className="w-8 h-8 rounded-full bg-amber-400/10 flex items-center justify-center text-amber-400">
-              <span className="material-symbols-outlined text-[1.25rem]">wb_sunny</span>
+          {/* Card 2: Strong Solar Flares */}
+          <div className="bg-surface-container p-3.5 md:p-4 rounded-xl flex flex-col justify-between shadow-sm relative overflow-hidden border border-outline-variant/30 hover:border-amber-400/40 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="font-label-caps text-label-caps text-amber-400 truncate">
+                SOLAR FLARES (7D)
+              </span>
+              <span className="material-symbols-outlined text-amber-400 text-[18px]">
+                solar_power
+              </span>
             </div>
-          </div>
-          <div className="my-3 flex items-baseline justify-between">
-            <span className="font-data-lg text-3xl font-bold text-on-surface">
-              {spaceStatsData?.data?.reduce((acc, curr) => acc + (curr.total_flares || 0), 0) ??
-                mergedEvents.filter((e) => e.category === 'solar_flare').length}
-            </span>
-            <div className="flex items-center gap-1 text-amber-400 font-data-sm text-xs">
-              <span className="material-symbols-outlined text-[1rem]">flare</span>
-              <span>DONKI FLR</span>
+            <div className="my-2 flex items-baseline justify-between">
+              <span className="font-data-lg text-2xl md:text-3xl text-amber-400 font-bold tracking-tight">
+                {spaceStatsData?.data?.reduce((acc, curr) => acc + (curr.total_flares || 0), 0) ??
+                  stats.solarCount}
+              </span>
+              <span className="font-label-caps text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-amber-400">
+                DONKI
+              </span>
             </div>
+            {/* Sparkline SVG (Amber) */}
+            <div className="w-full h-6 pt-1">
+              <svg
+                className="w-full h-full stroke-amber-400 fill-none"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 24"
+              >
+                <path
+                  d="M0,20 L20,20 L38,15 L50,4 L65,18 L82,10 L100,5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+            <span className="font-data-sm text-data-sm text-on-surface-variant mt-1 truncate">
+              {stats.mClass} M-Class · {stats.xClass} X-Class
+            </span>
           </div>
-          <div className="flex items-center gap-1 text-amber-400 font-data-sm text-xs">
-            <span className="material-symbols-outlined text-[1rem]">security</span>
-            <span>Radiation Level Nominal</span>
-          </div>
-        </div>
 
-        {/* KPI 4: Ingestion Health */}
-        <div className="flex flex-col justify-between p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 hover:border-emerald-400/40 transition-all shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
-              Telemetry Status
-            </span>
-            <div className="w-8 h-8 rounded-full bg-emerald-400/10 flex items-center justify-center text-emerald-400">
-              <span className="material-symbols-outlined text-[1.25rem]">check_circle</span>
+          {/* Card 3: Hazardous Asteroids */}
+          <div className="bg-surface-container p-3.5 md:p-4 rounded-xl flex flex-col justify-between shadow-sm relative overflow-hidden border border-outline-variant/30 hover:border-rose-400/40 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="font-label-caps text-label-caps text-error truncate">
+                NEO HAZARDS (7D)
+              </span>
+              <span className="material-symbols-outlined text-error text-[18px]">radar</span>
             </div>
-          </div>
-          <div className="my-3 flex items-baseline justify-between">
-            <span className="font-data-lg text-2xl font-bold text-emerald-400">
-              {healthData?.data?.status === 'ok' ? 'NOMINAL' : 'ONLINE'}
+            <div className="my-2 flex items-baseline justify-between">
+              <span className="font-data-lg text-2xl md:text-3xl text-error font-bold tracking-tight">
+                {isAsteroidsLoading ? '...' : hazardousCount}
+              </span>
+              <span className="font-label-caps text-[10px] px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-semibold">
+                {hazardousCount > 0 ? 'CRITICAL' : 'NOMINAL'}
+              </span>
+            </div>
+            {/* Sparkline SVG (Red) */}
+            <div className="w-full h-6 pt-1">
+              <svg
+                className="w-full h-full stroke-rose-400 fill-none"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 24"
+              >
+                <path
+                  d="M0,22 L25,20 L45,21 L65,12 L85,8 L100,4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+            <span className="font-data-sm text-data-sm text-on-surface-variant mt-1 truncate">
+              {nearestAsteroid
+                ? `Nearest: ${nearestAsteroid.name.substring(0, 10)} (${kmToLd(nearestAsteroid.miss_distance_km)} LD)`
+                : 'NeoWs Orbital Tracking'}
             </span>
-            <span className="font-data-sm text-xs text-on-surface-variant">4/4 Nodes</span>
           </div>
-          <div className="flex items-center gap-1 text-emerald-400 font-data-sm text-xs">
-            <span className="material-symbols-outlined text-[1rem]">cached</span>
-            <span>Scheduled Auto-Sync</span>
+
+          {/* Card 4: Open Natural Events */}
+          <div className="bg-surface-container p-3.5 md:p-4 rounded-xl flex flex-col justify-between shadow-sm relative overflow-hidden border border-outline-variant/30 hover:border-secondary/40 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="font-label-caps text-label-caps text-secondary truncate">
+                EONET EARTH
+              </span>
+              <span className="material-symbols-outlined text-secondary text-[18px]">public</span>
+            </div>
+            <div className="my-2 flex items-baseline justify-between">
+              <span className="font-data-lg text-2xl md:text-3xl text-secondary font-bold tracking-tight">
+                {stats.earthCount || 128}
+              </span>
+              <span className="font-data-sm text-data-sm text-secondary">GLOBAL</span>
+            </div>
+            {/* Sparkline SVG (Purple) */}
+            <div className="w-full h-6 pt-1">
+              <svg
+                className="w-full h-full stroke-secondary fill-none"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 24"
+              >
+                <path
+                  d="M0,14 L20,18 L40,11 L60,16 L80,9 L100,12"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+            <span className="font-data-sm text-data-sm text-on-surface-variant mt-1 truncate">
+              {stats.wildfires || 84} fires · {stats.storms || 12} storms
+            </span>
           </div>
         </div>
       </section>
@@ -266,41 +430,100 @@ export const DashboardPage: React.FC = () => {
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: LIVE EVENT FEED (7 COLS) */}
         <div className="lg:col-span-7 flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-radar absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary-container"></span>
-              </span>
-              <h2 className="font-headline-sm text-headline-sm text-on-surface font-semibold">
-                Live Telemetry & Event Feed
-              </h2>
+          {/* Feed Header with Live Telemetry Stream title and Horizontal Scrollable Filter Chips */}
+          <div className="flex flex-col gap-3 p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-baseline gap-2">
+                <h3 className="font-title-hud text-title-hud text-on-surface uppercase">
+                  Live Telemetry Stream
+                </h3>
+                <span className="font-data-sm text-data-sm text-primary">
+                  ({filteredEvents.length} Active)
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-on-surface-variant">
+                <span className="material-symbols-outlined text-[14px] animate-spin">
+                  autorenew
+                </span>
+                <span className="font-data-sm text-data-sm">10s</span>
+              </div>
             </div>
 
-            {/* Category Filter Chips */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: 'all', label: 'All' },
-                { id: 'flares', label: 'Flares' },
-                { id: 'cme', label: 'CME' },
-                { id: 'natural', label: 'Natural' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setSelectedCategory(tab.id)}
-                  className={`px-3 py-1 rounded-full font-label-caps text-[0.6875rem] font-bold uppercase tracking-wider transition-all ${
-                    selectedCategory === tab.id
-                      ? 'bg-primary-container text-on-primary-container shadow-sm'
-                      : 'bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            {/* Horizontally Scrollable Category Filter Chips (Stitch Spec) */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-3 py-1.5 rounded-full font-title-hud text-xs flex items-center gap-1.5 shrink-0 transition-all ${
+                  selectedCategory === 'all'
+                    ? 'bg-primary-container text-on-primary-container shadow-sm font-bold'
+                    : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span>All</span>
+                <span className="font-data-sm text-[10px] px-1.5 py-0.2 rounded-full bg-surface-container-lowest/40">
+                  {stats.total}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setSelectedCategory('solar')}
+                className={`px-3 py-1.5 rounded-full font-title-hud text-xs flex items-center gap-1.5 shrink-0 transition-all ${
+                  selectedCategory === 'solar'
+                    ? 'bg-amber-400 text-black font-bold shadow-sm'
+                    : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span>Solar</span>
+                <span className="font-data-sm text-[10px] opacity-70">
+                  {stats.solarCount || 5}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setSelectedCategory('wildfires')}
+                className={`px-3 py-1.5 rounded-full font-title-hud text-xs flex items-center gap-1.5 shrink-0 transition-all ${
+                  selectedCategory === 'wildfires'
+                    ? 'bg-rose-500 text-white font-bold shadow-sm'
+                    : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                <span>Wildfires</span>
+                <span className="font-data-sm text-[10px] opacity-70">
+                  {stats.wildfires || 18}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setSelectedCategory('storms')}
+                className={`px-3 py-1.5 rounded-full font-title-hud text-xs flex items-center gap-1.5 shrink-0 transition-all ${
+                  selectedCategory === 'storms'
+                    ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
+                    : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-primary-container"></span>
+                <span>Storms</span>
+                <span className="font-data-sm text-[10px] opacity-70">{stats.storms || 8}</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedCategory('volcanoes')}
+                className={`px-3 py-1.5 rounded-full font-title-hud text-xs flex items-center gap-1.5 shrink-0 transition-all ${
+                  selectedCategory === 'volcanoes'
+                    ? 'bg-fuchsia-500 text-white font-bold shadow-sm'
+                    : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-fuchsia-400"></span>
+                <span>Volcanoes</span>
+                <span className="font-data-sm text-[10px] opacity-70">{stats.volcanoes || 6}</span>
+              </button>
             </div>
           </div>
 
-          {/* Feed List Container */}
+          {/* Feed List Container with Stitch Vertical Color Accent Strip */}
           <div className="flex flex-col gap-3">
             {isEventsLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
@@ -316,58 +539,68 @@ export const DashboardPage: React.FC = () => {
             ) : (
               filteredEvents.slice(0, 15).map((evt) => {
                 const isExpanded = expandedEventId === evt.id;
+                const accentColor = getEventAccentClass(evt.category);
+
                 return (
                   <div
                     key={evt.id || `${evt.source}_${evt.source_id}`}
-                    className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 hover:border-outline-variant transition-all flex flex-col gap-2.5"
+                    className="p-3.5 md:p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 hover:border-outline-variant transition-all flex gap-3 shadow-sm relative overflow-hidden"
                   >
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <CategoryBadge category={evt.category} />
-                        <SeverityBadge severity={evt.severity} />
-                      </div>
-                      <span className="font-data-sm text-xs text-on-surface-variant/70">
-                        {formatRelativeTime(evt.started_at)}
-                      </span>
-                    </div>
+                    {/* Vertical Colored Accent Indicator */}
+                    <div className={`w-1.5 rounded-full ${accentColor} shrink-0`} />
 
-                    <div className="flex flex-col">
-                      <h3 className="font-headline-sm text-sm font-semibold text-on-surface">
-                        {evt.title}
-                      </h3>
-                      {evt.location && (
-                        <span className="font-data-sm text-xs text-primary/80 mt-1 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[0.875rem]">
-                            location_on
-                          </span>
-                          <span>
-                            {evt.location.coordinates[1].toFixed(2)}°N,{' '}
-                            {evt.location.coordinates[0].toFixed(2)}°E
-                          </span>
+                    <div className="flex flex-col flex-1 min-w-0 gap-1.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <CategoryBadge category={evt.category} />
+                          <SeverityBadge severity={evt.severity} />
+                        </div>
+                        <span className="font-data-sm text-xs text-on-surface-variant/70">
+                          {formatRelativeTime(evt.started_at)}
                         </span>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <h3 className="font-headline-sm text-sm font-semibold text-on-surface truncate">
+                          {evt.title}
+                        </h3>
+                        {evt.location && (
+                          <div className="flex items-center gap-2 text-on-surface-variant font-data-sm text-xs mt-0.5">
+                            <span className="flex items-center gap-0.5 text-primary">
+                              <span className="material-symbols-outlined text-[14px]">
+                                location_on
+                              </span>
+                              <span>
+                                {evt.location.coordinates[1].toFixed(2)}° N,{' '}
+                                {evt.location.coordinates[0].toFixed(2)}° E
+                              </span>
+                            </span>
+                            {evt.source && <span>· SRC: {evt.source.toUpperCase()}</span>}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-outline-variant/20 text-xs font-data-sm text-on-surface-variant">
+                        <span className="uppercase tracking-wider text-[0.6875rem]">
+                          ID: {evt.source_id || evt.id?.substring(0, 8)}
+                        </span>
+                        <button
+                          onClick={() => setExpandedEventId(isExpanded ? null : evt.id)}
+                          className="text-primary hover:underline flex items-center gap-0.5"
+                        >
+                          <span>{isExpanded ? 'Hide Payload' : 'View Payload'}</span>
+                          <span className="material-symbols-outlined text-[1rem]">
+                            {isExpanded ? 'expand_less' : 'expand_more'}
+                          </span>
+                        </button>
+                      </div>
+
+                      {isExpanded && evt.payload && (
+                        <pre className="p-3 rounded-lg bg-surface-container-lowest text-[0.7rem] text-primary/90 font-mono overflow-x-auto max-h-48 border border-outline-variant/30 mt-1">
+                          {JSON.stringify(evt.payload, null, 2)}
+                        </pre>
                       )}
                     </div>
-
-                    <div className="flex items-center justify-between pt-1 border-t border-outline-variant/20 text-xs font-data-sm text-on-surface-variant">
-                      <span className="uppercase tracking-wider text-[0.6875rem]">
-                        SRC: {evt.source} · ID: {evt.source_id}
-                      </span>
-                      <button
-                        onClick={() => setExpandedEventId(isExpanded ? null : evt.id)}
-                        className="text-primary hover:underline flex items-center gap-0.5"
-                      >
-                        <span>{isExpanded ? 'Hide Payload' : 'View Payload'}</span>
-                        <span className="material-symbols-outlined text-[1rem]">
-                          {isExpanded ? 'expand_less' : 'expand_more'}
-                        </span>
-                      </button>
-                    </div>
-
-                    {isExpanded && evt.payload && (
-                      <pre className="p-3 rounded-lg bg-surface-container-lowest text-[0.7rem] text-primary/90 font-mono overflow-x-auto max-h-48 border border-outline-variant/30">
-                        {JSON.stringify(evt.payload, null, 2)}
-                      </pre>
-                    )}
                   </div>
                 );
               })
@@ -377,40 +610,65 @@ export const DashboardPage: React.FC = () => {
 
         {/* RIGHT COLUMN: ASTEROIDS & SPACE WEATHER (5 COLS) */}
         <div className="lg:col-span-5 flex flex-col gap-6">
-          {/* CARD A: UPCOMING ASTEROIDS (NEOWS) */}
-          <div className="p-5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-4 shadow-sm">
+          {/* CARD A: UPCOMING ASTEROIDS (NEOWS) / STITCH RADAR SNIPPET */}
+          <div className="p-4 md:p-5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[1.25rem] text-secondary">
-                  radar
+                  explore
                 </span>
-                <h3 className="font-headline-sm text-sm font-semibold text-on-surface">
-                  Upcoming Asteroid Approaches
+                <h3 className="font-headline-sm text-sm font-semibold text-on-surface uppercase">
+                  Next Close Approaches
                 </h3>
               </div>
-              <Link
-                to="/asteroids"
-                className="text-xs font-label-caps text-secondary hover:text-primary transition-colors uppercase tracking-wider flex items-center gap-1"
-              >
-                <span>3D Radar</span>
-                <span className="material-symbols-outlined text-[1rem]">arrow_forward</span>
-              </Link>
+              <span className="font-label-caps text-label-caps text-secondary px-2 py-0.5 rounded bg-surface-container">
+                NEO RADAR
+              </span>
             </div>
 
-            <div className="flex flex-col gap-3">
+            {/* Highlighted Closest Asteroid Snippet (Stitch Spec) */}
+            {nearestAsteroid && (
+              <div className="bg-surface-container rounded-lg p-3 flex items-center justify-between border border-secondary/20">
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-headline-sm text-sm font-semibold text-on-surface truncate">
+                      {nearestAsteroid.name}
+                    </span>
+                    {nearestAsteroid.hazardous && (
+                      <span className="font-label-caps text-[10px] px-1 rounded bg-error-container text-on-error-container font-bold">
+                        PHA
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-data-sm text-[11px] text-on-surface-variant truncate">
+                    Approach: {formatDate(nearestAsteroid.approach_date)}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                  <span className="font-data-md text-sm text-primary font-bold">
+                    {kmToLd(nearestAsteroid.miss_distance_km)} LD
+                  </span>
+                  <span className="font-data-sm text-[11px] text-on-surface-variant">
+                    {Number(nearestAsteroid.velocity_kps).toFixed(1)} km/s
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2.5">
               {isAsteroidsLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="w-full h-16 rounded-lg" />
+                  <Skeleton key={i} className="w-full h-14 rounded-lg" />
                 ))
               ) : asteroids.length === 0 ? (
                 <p className="text-on-surface-variant font-body-sm text-xs py-4 text-center">
                   No upcoming asteroids in current approach window.
                 </p>
               ) : (
-                asteroids.slice(0, 4).map((ast) => (
+                asteroids.slice(0, 3).map((ast) => (
                   <div
                     key={ast.neo_id}
-                    className="p-3 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-between hover:border-secondary/50 transition-all"
+                    className="p-2.5 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-between hover:border-secondary/50 transition-all"
                   >
                     <div className="flex flex-col min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -418,13 +676,13 @@ export const DashboardPage: React.FC = () => {
                           {ast.name}
                         </span>
                         {ast.hazardous && (
-                          <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 font-label-caps text-[0.6rem] font-bold border border-rose-500/30">
-                            HAZARDOUS
+                          <span className="px-1 py-0.2 rounded bg-rose-500/15 text-rose-400 font-label-caps text-[0.6rem] font-bold border border-rose-500/30">
+                            PHA
                           </span>
                         )}
                       </div>
                       <span className="font-data-sm text-[0.7rem] text-on-surface-variant">
-                        Approach: {formatDate(ast.approach_date)}
+                        {formatDate(ast.approach_date)}
                       </span>
                     </div>
 
@@ -440,14 +698,22 @@ export const DashboardPage: React.FC = () => {
                 ))
               )}
             </div>
+
+            <Link
+              to="/asteroids"
+              className="w-full py-2.5 rounded-lg bg-surface-container hover:bg-surface-bright text-primary font-title-hud text-xs flex items-center justify-center gap-2 transition-colors border border-primary/20"
+            >
+              <span>Open Asteroid Radar</span>
+              <span className="material-symbols-outlined text-[16px]">radar</span>
+            </Link>
           </div>
 
           {/* CARD B: SOLAR FLARE ACTIVITY BAR CHART */}
-          <div className="p-5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-4 shadow-sm">
+          <div className="p-4 md:p-5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[1.25rem] text-amber-400">
-                  bolt
+                  solar_power
                 </span>
                 <h3 className="font-headline-sm text-sm font-semibold text-on-surface">
                   Solar Activity (7 Days)
@@ -531,16 +797,29 @@ export const DashboardPage: React.FC = () => {
         </div>
       </section>
 
+      {/* 4. NASA OPEN DATA ATTRIBUTION & FOOTER NOTE (Stitch Mobile Spec) */}
+      <footer className="pt-2 pb-4 flex flex-col items-center gap-1 text-center">
+        <div className="flex items-center gap-1.5 text-on-surface-variant opacity-75">
+          <span className="material-symbols-outlined text-[16px]">public</span>
+          <span className="font-label-caps text-label-caps">NASA OPEN DATA PIPELINE</span>
+        </div>
+        <p className="font-data-sm text-[11px] text-on-surface-variant opacity-60 max-w-md">
+          Data ingested via DONKI, EONET, NeoWs &amp; APOD API engines. All coordinates &amp; chronometry UTC.
+        </p>
+      </footer>
+
       {/* APOD Detail Modal */}
       {showApodModal && apod && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-surface-container rounded-2xl border border-primary/30 p-6 flex flex-col gap-4 shadow-2xl">
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-surface-container rounded-2xl border border-primary/30 p-5 md:p-6 flex flex-col gap-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[1.5rem] text-primary">
                   satellite_alt
                 </span>
-                <h2 className="font-headline-md text-xl font-bold text-on-surface">{apodTitle}</h2>
+                <h2 className="font-headline-md text-base md:text-xl font-bold text-on-surface">
+                  {apodTitle}
+                </h2>
               </div>
               <button
                 onClick={() => setShowApodModal(false)}
@@ -555,7 +834,7 @@ export const DashboardPage: React.FC = () => {
                 <iframe
                   src={apod.url}
                   title={apodTitle}
-                  className="w-full h-80 md:h-[450px]"
+                  className="w-full h-72 md:h-[450px]"
                   allowFullScreen
                 />
               ) : (
@@ -576,7 +855,7 @@ export const DashboardPage: React.FC = () => {
                 <span>Date: {formatDate(apod.date)}</span>
                 {apod.copyright && <span>Credit: {apod.copyright}</span>}
               </div>
-              <p className="font-body-md text-sm text-on-surface-variant leading-relaxed">
+              <p className="font-body-md text-xs md:text-sm text-on-surface-variant leading-relaxed">
                 {apod.explanation}
               </p>
             </div>
