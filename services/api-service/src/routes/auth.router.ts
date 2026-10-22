@@ -28,6 +28,8 @@ const UpdateProfileSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal('')),
+  current_password: z.string().optional(),
+  new_password: z.string().min(6, 'New password must be at least 6 characters').optional(),
 });
 
 const LoginSchema = z.object({
@@ -199,8 +201,40 @@ authRouter.put('/profile', authMiddleware, async (req: Request, res: Response) =
       });
     }
 
-    const { telegram_chat_id, discord_webhook } = parseResult.data;
+    const { telegram_chat_id, discord_webhook, current_password, new_password } = parseResult.data;
     const pool = getPool();
+
+    let password_hash: string | undefined = undefined;
+
+    if (new_password) {
+      if (!current_password) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: 'Current password is required to set a new password',
+        });
+      }
+
+      const existingUser = await getUserById(req.user!.id, pool);
+      if (!existingUser) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: 'User not found',
+        });
+      }
+
+      const isMatch = await bcrypt.compare(current_password, existingUser.password_hash);
+      if (!isMatch) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: 'Current password is incorrect',
+        });
+      }
+
+      password_hash = await bcrypt.hash(new_password, 10);
+    }
 
     const cleanedTelegram =
       telegram_chat_id !== undefined
@@ -221,6 +255,7 @@ authRouter.put('/profile', authMiddleware, async (req: Request, res: Response) =
       {
         telegram_chat_id: cleanedTelegram,
         discord_webhook: cleanedDiscord,
+        password_hash,
       },
       pool
     );

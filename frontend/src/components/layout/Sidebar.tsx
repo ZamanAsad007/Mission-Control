@@ -5,7 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 import { getHealth } from '@/lib/api';
 import { formatRelativeTime } from '@/lib/utils';
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  onOpenProfile?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ onOpenProfile }) => {
   const { user, isAuthenticated, logout } = useAuth();
 
   const { data: healthData } = useQuery({
@@ -117,25 +121,46 @@ export const Sidebar: React.FC = () => {
 
         {/* User profile / Auth Link */}
         {isAuthenticated && user ? (
-          <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container/60 border border-outline-variant/20">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-secondary/20 text-secondary border border-secondary/30 flex items-center justify-center font-bold text-xs uppercase">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container/60 border border-outline-variant/20 hover:border-primary/40 transition-all shadow-sm">
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="flex items-center gap-2 min-w-0 text-left flex-1 hover:opacity-90 group mr-1"
+              title="Click to edit operator profile"
+            >
+              <div className="w-7 h-7 rounded-full bg-secondary/20 text-secondary border border-secondary/30 flex items-center justify-center font-bold text-xs uppercase shrink-0 group-hover:scale-105 transition-transform shadow-sm">
                 {user.email.substring(0, 2)}
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="font-body-sm text-on-surface truncate text-xs font-medium">
+                <span className="font-body-sm text-on-surface truncate text-xs font-medium group-hover:text-primary transition-colors">
                   {user.email}
                 </span>
-                <span className="font-label-caps text-[0.6rem] text-primary">Flight Operator</span>
+                <span className="font-label-caps text-[0.6rem] text-primary flex items-center gap-1">
+                  <span>Flight Operator</span>
+                  <span className="material-symbols-outlined text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                    edit
+                  </span>
+                </span>
               </div>
-            </div>
-            <button
-              onClick={logout}
-              title="Sign Out"
-              className="p-1 rounded text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors"
-            >
-              <span className="material-symbols-outlined text-[1.125rem]">logout</span>
             </button>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={onOpenProfile}
+                title="Edit Profile Settings"
+                className="p-1 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined text-[1.125rem]">settings</span>
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                title="Sign Out"
+                className="p-1 rounded text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined text-[1.125rem]">logout</span>
+              </button>
+            </div>
           </div>
         ) : (
           <NavLink

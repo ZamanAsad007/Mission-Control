@@ -37,7 +37,11 @@ export async function getUserById(id: string, pool: Pool = getPool()): Promise<D
 
 export async function updateUserIntegrations(
   id: string,
-  integrations: { telegram_chat_id?: string | null; discord_webhook?: string | null },
+  integrations: {
+    telegram_chat_id?: string | null;
+    discord_webhook?: string | null;
+    password_hash?: string;
+  },
   pool: Pool = getPool()
 ): Promise<DbUser | null> {
   const updates: string[] = [];
@@ -50,6 +54,10 @@ export async function updateUserIntegrations(
   if (integrations.discord_webhook !== undefined) {
     params.push(integrations.discord_webhook);
     updates.push(`discord_webhook = $${params.length}`);
+  }
+  if (integrations.password_hash !== undefined) {
+    params.push(integrations.password_hash);
+    updates.push(`password_hash = $${params.length}`);
   }
 
   if (updates.length === 0) {

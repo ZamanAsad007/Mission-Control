@@ -8,12 +8,14 @@ interface HeaderProps {
   streamStatus?: StreamStatus;
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
+  onOpenProfile?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   streamStatus = 'connected',
   searchTerm = '',
   onSearchChange,
+  onOpenProfile,
 }) => {
   const [utcTime, setUtcTime] = useState(formatUtcTime());
   const [showMobileSearch, setShowMobileSearch] = useState(false);
@@ -124,16 +126,25 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden lg:inline">API DOCS</span>
         </a>
 
-        {/* User Avatar / Profile Icon */}
-        <NavLink
-          to={isAuthenticated ? '/alerts' : '/login'}
-          className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary hover:scale-105 transition-transform"
-          title={isAuthenticated ? user?.email : 'Sign In'}
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            {isAuthenticated ? 'person' : 'key'}
-          </span>
-        </NavLink>
+        {/* User Avatar / Profile Button */}
+        {isAuthenticated ? (
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary hover:scale-105 transition-transform shadow-sm"
+            title={`${user?.email || 'Operator'} - Edit Profile`}
+          >
+            <span className="material-symbols-outlined text-[18px]">person</span>
+          </button>
+        ) : (
+          <NavLink
+            to="/login"
+            className="w-8 h-8 rounded-full bg-surface-container border border-outline-variant/40 flex items-center justify-center text-on-surface-variant hover:text-primary hover:scale-105 transition-transform"
+            title="Operator Sign In"
+          >
+            <span className="material-symbols-outlined text-[18px]">key</span>
+          </NavLink>
+        )}
       </div>
 
       {/* Expandable Mobile Search Field */}

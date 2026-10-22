@@ -152,6 +152,8 @@ export async function apiGetMe(): Promise<ApiResponse<User>> {
 export async function apiUpdateProfile(data: {
   telegram_chat_id?: string | null;
   discord_webhook?: string | null;
+  current_password?: string;
+  new_password?: string;
 }): Promise<ApiResponse<User>> {
   return request<ApiResponse<User>>('/auth/profile', {
     method: 'PUT',

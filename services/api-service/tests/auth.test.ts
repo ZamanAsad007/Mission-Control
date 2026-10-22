@@ -215,6 +215,63 @@ describe('Auth Endpoints', () => {
       );
     });
 
+    it('returns 400 when changing password with incorrect current password', async () => {
+      const token = signToken({ id: 'usr-123', email: 'astronaut@nasa.gov' });
+      const hashedOld = await bcrypt.hash('correctPassword123', 10);
+      (db.getUserById as jest.Mock).mockResolvedValue({
+        id: 'usr-123',
+        email: 'astronaut@nasa.gov',
+        password_hash: hashedOld,
+      });
+
+      const res = await request(app)
+        .put('/api/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          current_password: 'wrongPassword',
+          new_password: 'brandNewPassword123',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe('Current password is incorrect');
+    });
+
+    it('successfully updates password when current password is valid', async () => {
+      const token = signToken({ id: 'usr-123', email: 'astronaut@nasa.gov' });
+      const hashedOld = await bcrypt.hash('correctPassword123', 10);
+      (db.getUserById as jest.Mock).mockResolvedValue({
+        id: 'usr-123',
+        email: 'astronaut@nasa.gov',
+        password_hash: hashedOld,
+      });
+      (db.updateUserIntegrations as jest.Mock).mockResolvedValue({
+        id: 'usr-123',
+        email: 'astronaut@nasa.gov',
+        telegram_chat_id: null,
+        discord_webhook: null,
+        created_at: new Date('2026-10-18T10:00:00Z'),
+      });
+
+      const res = await request(app)
+        .put('/api/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          current_password: 'correctPassword123',
+          new_password: 'brandNewPassword123',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(db.updateUserIntegrations).toHaveBeenCalledWith(
+        'usr-123',
+        expect.objectContaining({
+          password_hash: expect.any(String),
+        }),
+        expect.anything()
+      );
+    });
+
     it('returns 400 when discord_webhook is an invalid URL format', async () => {
       const token = signToken({ id: 'usr-123', email: 'astronaut@nasa.gov' });
 

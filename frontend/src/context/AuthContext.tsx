@@ -9,7 +9,12 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, options?: { telegram_chat_id?: string; discord_webhook?: string }) => Promise<void>;
-  updateProfile: (data: { telegram_chat_id?: string | null; discord_webhook?: string | null }) => Promise<User>;
+  updateProfile: (data: {
+    telegram_chat_id?: string | null;
+    discord_webhook?: string | null;
+    current_password?: string;
+    new_password?: string;
+  }) => Promise<User>;
   logout: () => void;
 }
 
@@ -74,6 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (data: {
     telegram_chat_id?: string | null;
     discord_webhook?: string | null;
+    current_password?: string;
+    new_password?: string;
   }) => {
     const res = await apiUpdateProfile(data);
     if (res.success && res.data) {
