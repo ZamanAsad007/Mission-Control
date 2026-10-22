@@ -10,6 +10,7 @@ import {
 } from '@mission-control/db';
 import { matchRule } from './matcher';
 import { getNotifier, NotificationPayload } from './notifiers';
+import { formatAlertDateTime } from './utils';
 
 export interface AlertEngineOptions {
   pool?: Pool;
@@ -150,7 +151,7 @@ export class AlertEngine {
       return {
         recipient,
         title: evt.title,
-        body: `Detected event category: ${evt.category} from ${evt.source}. Started at: ${evt.started_at}`,
+        body: `Detected event category: ${evt.category} from ${evt.source}. Started at: ${formatAlertDateTime(evt.started_at)}`,
         severity: evt.severity,
         timestamp:
           typeof evt.started_at === 'string' ? evt.started_at : evt.started_at.toISOString(),
@@ -160,7 +161,7 @@ export class AlertEngine {
       return {
         recipient,
         title: `Near-Earth Asteroid: ${ast.name}`,
-        body: `Approach Date: ${ast.approach_date}. Miss distance: ${Number(ast.miss_distance_km).toLocaleString()} km. Velocity: ${ast.velocity_kps} km/s.`,
+        body: `Approach Date: ${formatAlertDateTime(ast.approach_date)}. Miss distance: ${Number(ast.miss_distance_km).toLocaleString()} km. Velocity: ${ast.velocity_kps} km/s.`,
         severity: ast.hazardous ? 'Hazardous' : 'Non-Hazardous',
         timestamp: ast.approach_date,
       };

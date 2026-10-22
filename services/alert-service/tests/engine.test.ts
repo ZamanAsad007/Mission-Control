@@ -1,9 +1,33 @@
 import { AlertEngine } from '../src/engine';
+import { formatAlertDateTime } from '../src/utils';
 import * as db from '@mission-control/db';
 import * as notifiersModule from '../src/notifiers';
 
 jest.mock('@mission-control/db');
 jest.mock('../src/notifiers');
+
+describe('formatAlertDateTime utility', () => {
+  it('formats ISO timestamps into human-readable UTC strings', () => {
+    expect(formatAlertDateTime('2026-10-20T00:00:00.000Z')).toBe('Oct 20, 2026, 00:00 UTC');
+    expect(formatAlertDateTime('2026-10-18T14:32:00Z')).toBe('Oct 18, 2026, 14:32 UTC');
+    expect(formatAlertDateTime('2026-10-18T14:32:45Z')).toBe('Oct 18, 2026, 14:32:45 UTC');
+  });
+
+  it('formats Date objects properly', () => {
+    const d = new Date('2026-10-20T00:00:00.000Z');
+    expect(formatAlertDateTime(d)).toBe('Oct 20, 2026, 00:00 UTC');
+  });
+
+  it('formats date-only strings without unwanted 00:00 time', () => {
+    expect(formatAlertDateTime('2026-10-25')).toBe('Oct 25, 2026');
+  });
+
+  it('handles null, undefined and invalid strings safely', () => {
+    expect(formatAlertDateTime(null)).toBe('N/A');
+    expect(formatAlertDateTime(undefined)).toBe('N/A');
+    expect(formatAlertDateTime('invalid-date')).toBe('invalid-date');
+  });
+});
 
 describe('AlertEngine Processing, Cooldown & Retry', () => {
   let mockPool: any;
@@ -100,7 +124,12 @@ describe('AlertEngine Processing, Cooldown & Retry', () => {
       const count = await engine.processEvent(mockEvent);
 
       expect(count).toBe(1);
-      expect(mockNotifier.send).toHaveBeenCalled();
+      expect(mockNotifier.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: 'chat-100',
+          body: expect.stringContaining('Started at: Oct 18, 2026, 12:00 UTC'),
+        })
+      );
       expect(db.createDelivery).toHaveBeenCalledWith(
         expect.objectContaining({
           rule_id: 'rule-flare-1',
@@ -170,7 +199,12 @@ describe('AlertEngine Processing, Cooldown & Retry', () => {
       const count = await engine.processAsteroid(asteroid);
 
       expect(count).toBe(1);
-      expect(mockNotifier.send).toHaveBeenCalled();
+      expect(mockNotifier.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: 'chat-200',
+          body: expect.stringContaining('Approach Date: Oct 25, 2026'),
+        })
+      );
       expect(db.createDelivery).toHaveBeenCalledWith(
         expect.objectContaining({
           rule_id: 'rule-ast-1',

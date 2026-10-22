@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { Notifier, NotificationPayload, NotificationResult } from './types';
 import { config } from '../config';
+import { formatAlertDateTime } from '../utils';
 
 export class EmailNotifier implements Notifier {
   public channel = 'email' as const;
@@ -26,10 +27,11 @@ export class EmailNotifier implements Notifier {
     }
 
     try {
+      const formattedTime = formatAlertDateTime(payload.timestamp);
       const subject = `[Mission Control Alert] ${payload.title}`;
       const text = `${payload.title}\n\n${payload.body}\n\nSeverity: ${
         payload.severity || 'N/A'
-      }\nTime: ${payload.timestamp || new Date().toISOString()}`;
+      }\nTime: ${formattedTime}`;
 
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
@@ -40,6 +42,7 @@ export class EmailNotifier implements Notifier {
               ? `<p><strong>Severity:</strong> <span style="background: #ffebee; color: #c62828; padding: 3px 8px; border-radius: 4px;">${payload.severity}</span></p>`
               : ''
           }
+          <p style="font-size: 13px; color: #666;"><strong>Time:</strong> ${formattedTime}</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
           <p style="font-size: 12px; color: #888;">Mission Control Space & Earth Dashboard Alerts</p>
         </div>
