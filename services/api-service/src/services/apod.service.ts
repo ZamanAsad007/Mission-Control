@@ -122,7 +122,7 @@ export async function resolveApod(date?: string, pool: Pool = getPool()): Promis
   const targetDate = date || new Date().toISOString().slice(0, 10);
 
   // 1. Check if the requested date already exists in the database and is valid
-  let apod: DbApod | null = await getApodByDate(targetDate, pool);
+  const apod: DbApod | null = await getApodByDate(targetDate, pool);
   if (apod && !isCorruptedApod(apod)) {
     return {
       ...apod,

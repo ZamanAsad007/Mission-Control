@@ -144,16 +144,22 @@ export function getCategoryBadge(category: string): {
 /**
  * Safely extracts [lng, lat] coordinates from any MissionEvent representation.
  */
-export function getEventCoordinates(evt?: {
-  latitude?: number | null;
-  longitude?: number | null;
-  location?: { coordinates?: [number, number] | number[] } | null;
-  payload?: any;
-} | null): [number, number] | null {
+export function getEventCoordinates(
+  evt?: {
+    latitude?: number | null;
+    longitude?: number | null;
+    location?: { coordinates?: [number, number] | number[] } | null;
+    payload?: any;
+  } | null
+): [number, number] | null {
   if (!evt) return null;
 
   // 1. Direct location GeoJSON object
-  if (evt.location?.coordinates && Array.isArray(evt.location.coordinates) && evt.location.coordinates.length >= 2) {
+  if (
+    evt.location?.coordinates &&
+    Array.isArray(evt.location.coordinates) &&
+    evt.location.coordinates.length >= 2
+  ) {
     const lng = Number(evt.location.coordinates[0]);
     const lat = Number(evt.location.coordinates[1]);
     if (!isNaN(lat) && !isNaN(lng)) return [lng, lat];

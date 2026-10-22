@@ -8,8 +8,8 @@ function normalizeApod(row: any): DbApod | null {
     row.date instanceof Date
       ? row.date.toISOString().slice(0, 10)
       : typeof row.date === 'string'
-      ? row.date.slice(0, 10)
-      : String(row.date);
+        ? row.date.slice(0, 10)
+        : String(row.date);
   return {
     ...row,
     date: dateStr,

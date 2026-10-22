@@ -65,8 +65,8 @@ function normalizeAsteroid(row: any): DbAsteroid {
     row.approach_date instanceof Date
       ? row.approach_date.toISOString().slice(0, 10)
       : typeof row.approach_date === 'string'
-      ? row.approach_date.slice(0, 10)
-      : String(row.approach_date);
+        ? row.approach_date.slice(0, 10)
+        : String(row.approach_date);
   return {
     ...row,
     approach_date: dateStr,

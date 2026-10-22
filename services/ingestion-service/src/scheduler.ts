@@ -53,7 +53,9 @@ export class IngestionScheduler {
       const today = new Date().toISOString().slice(0, 10);
       const existingApod = await getApodByDate(today, getPool());
       if (!existingApod) {
-        console.log(`[Scheduler] APOD for today (${today}) not found in DB. Queuing initial apod_job...`);
+        console.log(
+          `[Scheduler] APOD for today (${today}) not found in DB. Queuing initial apod_job...`
+        );
         await this.triggerJob('apod_job', { date: today });
       }
     } catch (err: any) {

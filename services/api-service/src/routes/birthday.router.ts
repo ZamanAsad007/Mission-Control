@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import https from 'https';
 import { getPool } from '@mission-control/db';
 import { cacheMiddleware } from '../middleware/cache.middleware';
-import { config } from '../config';
 import { resolveApod } from '../services/apod.service';
 
 export const birthdayRouter = Router();
@@ -103,7 +102,10 @@ birthdayRouter.get('/', async (req: Request, res: Response) => {
 
       // 1) If date is after DSCOVR first science observations (June 2015), attempt exact date
       if (date >= '2015-06-13') {
-        items = await fetchJsonWithHttps<any[]>(`https://epic.gsfc.nasa.gov/api/natural/date/${date}`, 4000);
+        items = await fetchJsonWithHttps<any[]>(
+          `https://epic.gsfc.nasa.gov/api/natural/date/${date}`,
+          4000
+        );
       }
 
       // 2) If no images for exact date (e.g. before 2015 or satellite was in calibration),
@@ -133,8 +135,8 @@ birthdayRouter.get('/', async (req: Request, res: Response) => {
           caption: isExact
             ? item.caption || 'DSCOVR EPIC Natural Color View of Earth'
             : date < '2015-06-13'
-            ? `DSCOVR began operations in 2015. Shown here is Earth as viewed on your birthday date (${date.slice(5)}) by NASA's DSCOVR EPIC observatory from Lagrange Point 1.`
-            : `DSCOVR EPIC natural color observation of planet Earth for calendar date ${date.slice(5)}.`,
+              ? `DSCOVR began operations in 2015. Shown here is Earth as viewed on your birthday date (${date.slice(5)}) by NASA's DSCOVR EPIC observatory from Lagrange Point 1.`
+              : `DSCOVR EPIC natural color observation of planet Earth for calendar date ${date.slice(5)}.`,
           imageUrl: `https://epic.gsfc.nasa.gov/archive/natural/${y}/${m}/${d}/jpg/${item.image}.jpg`,
           coordinates: item.centroid_coordinates || null,
         };
