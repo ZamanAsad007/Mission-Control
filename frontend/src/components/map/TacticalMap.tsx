@@ -11,6 +11,8 @@ interface TacticalMapProps {
   selectedEvent: MissionEvent | null;
   onSelectEvent: (event: MissionEvent) => void;
   userLocation: [number, number] | null;
+  onLocateMe?: () => void;
+  isLocating?: boolean;
 }
 
 // Bounding box limits for Web Mercator Earth
@@ -28,6 +30,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   selectedEvent,
   onSelectEvent,
   userLocation,
+  onLocateMe,
+  isLocating,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -49,10 +53,24 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     localStorage.setItem('mc_basemap_mode', mode);
   };
 
+  const handleCycleBasemap = () => {
+    const modes: BasemapMode[] = ['satellite', 'dark', 'streets'];
+    const nextIdx = (modes.indexOf(basemapMode) + 1) % modes.length;
+    handleSelectBasemap(modes[nextIdx]);
+  };
+
   const handleRecenter = useCallback(() => {
     if (!mapInstanceRef.current) return;
     mapInstanceRef.current.flyTo([20, 0], 3, { duration: 0.8 });
   }, []);
+
+  const handleZoomIn = () => {
+    mapInstanceRef.current?.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    mapInstanceRef.current?.zoomOut();
+  };
 
   // Handle Fullscreen Escape key
   useEffect(() => {
@@ -101,7 +119,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       maxBoundsViscosity: 1.0, // Hard stop at North and South poles (prevents infinite void)
       worldCopyJump: true, // Smooth horizontal world wrapping
       bounceAtZoomLimits: false,
-      zoomControl: false,
+      zoomControl: false, // We use custom styled tactical HUD controls matching Stitch
       attributionControl: false,
     });
 
@@ -109,209 +127,167 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     const tilesGroup = L.layerGroup().addTo(map);
     tilesLayerGroupRef.current = tilesGroup;
 
-    // Zoom control in bottom right
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
-
     // Markers layer
-    markersLayerRef.current = L.layerGroup().addTo(map);
+    const markersGroup = L.layerGroup().addTo(map);
+    markersLayerRef.current = markersGroup;
+
     mapInstanceRef.current = map;
 
-    // Ensure proper initial size
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
-
-    const resizeObserver = new ResizeObserver(() => {
-      map.invalidateSize();
-    });
-    resizeObserver.observe(mapContainerRef.current);
-
     return () => {
-      clearTimeout(timer);
-      resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
-      tilesLayerGroupRef.current = null;
-      markersLayerRef.current = null;
     };
   }, []);
 
-  // Update Basemap Tiles with Optimized Caching & Buffering
+  // Switch Tile Layer when basemapMode changes
   useEffect(() => {
-    const tileGroup = tilesLayerGroupRef.current;
-    if (!tileGroup) return;
+    const group = tilesLayerGroupRef.current;
+    if (!group) return;
 
-    tileGroup.clearLayers();
-
-    const tileBounds: L.LatLngBoundsExpression = [
-      [SOUTH_BOUND, -180],
-      [NORTH_BOUND, 180],
-    ];
-
-    const commonTileOpts: L.TileLayerOptions = {
-      bounds: tileBounds,
-      noWrap: false,
-      updateWhenZooming: false, // Freeze tile requests during zoom transition for 60fps animations
-      updateWhenIdle: false,
-      updateInterval: 120, // Throttle tile fetch during rapid dragging
-      keepBuffer: 6, // Keep 6 tiles pre-cached outside viewport for butter-smooth panning
-    };
+    group.clearLayers();
 
     if (basemapMode === 'satellite') {
-      const base = L.tileLayer(
-        'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      const esriSat = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         {
-          ...commonTileOpts,
+          attribution: 'Tiles &copy; Esri',
           maxZoom: 18,
-          maxNativeZoom: 18,
-          attribution: '&copy; Esri, Maxar, Earthstar Geographics',
+          keepBuffer: 4,
+          updateWhenIdle: true,
         }
       );
-
-      const boundaries = L.tileLayer(
-        'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-        {
-          ...commonTileOpts,
-          maxZoom: 18,
-          maxNativeZoom: 18,
-          opacity: 0.85,
-        }
-      );
-
-      tileGroup.addLayer(base);
-      tileGroup.addLayer(boundaries);
+      esriSat.addTo(group);
     } else if (basemapMode === 'dark') {
-      const base = L.tileLayer(
-        'https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      const darkLayer = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
         {
-          ...commonTileOpts,
-          maxZoom: 18,
-          maxNativeZoom: 16,
-          attribution: '&copy; Esri, HERE, Garmin, OpenStreetMap contributors',
+          attribution: 'Tiles &copy; Esri',
+          maxZoom: 16,
+          keepBuffer: 4,
+          updateWhenIdle: true,
         }
       );
-
-      const labels = L.tileLayer(
-        'https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+      darkLayer.addTo(group);
+    } else if (basemapMode === 'streets') {
+      const osm = L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         {
-          ...commonTileOpts,
+          attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 18,
-          maxNativeZoom: 16,
-          opacity: 0.9,
+          keepBuffer: 4,
+          updateWhenIdle: true,
         }
       );
-
-      tileGroup.addLayer(base);
-      tileGroup.addLayer(labels);
-    } else {
-      const streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        ...commonTileOpts,
-        maxZoom: 18,
-        maxNativeZoom: 19,
-        className: 'leaflet-tile-dark',
-        attribution: '&copy; OpenStreetMap contributors',
-      });
-
-      tileGroup.addLayer(streets);
+      osm.addTo(group);
     }
   }, [basemapMode]);
 
-  // Update Markers with Lightweight, High-Performance DOM Nodes
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    const markersLayer = markersLayerRef.current;
-    if (!map || !markersLayer) return;
+  // Marker colors and icons by category
+  const getCategoryMarkerConfig = (category: string) => {
+    const c = (category || '').toLowerCase();
+    if (c.includes('wildfire')) {
+      return {
+        color: '#fb5a3c',
+        halo: 'rgba(251, 90, 60, 0.4)',
+        icon: 'local_fire_department',
+      };
+    }
+    if (c.includes('storm')) {
+      return {
+        color: '#22d3ee',
+        halo: 'rgba(34, 211, 238, 0.4)',
+        icon: 'cyclone',
+      };
+    }
+    if (c.includes('volcano')) {
+      return {
+        color: '#f43f5e',
+        halo: 'rgba(244, 63, 94, 0.4)',
+        icon: 'volcano',
+      };
+    }
+    if (c.includes('ice')) {
+      return {
+        color: '#38bdf8',
+        halo: 'rgba(56, 189, 248, 0.4)',
+        icon: 'ac_unit',
+      };
+    }
+    if (c.includes('flood')) {
+      return {
+        color: '#2dd4bf',
+        halo: 'rgba(45, 212, 191, 0.4)',
+        icon: 'flood',
+      };
+    }
+    return {
+      color: '#a78bfa',
+      halo: 'rgba(167, 139, 250, 0.4)',
+      icon: 'radar',
+    };
+  };
 
-    markersLayer.clearLayers();
+  // Render Markers
+  useEffect(() => {
+    const group = markersLayerRef.current;
+    if (!group) return;
+
+    group.clearLayers();
 
     events.forEach((evt) => {
       const coords = getEventCoordinates(evt);
       if (!coords) return;
-
       const [lng, lat] = coords;
-      if (typeof lat !== 'number' || typeof lng !== 'number') return;
 
       const isSelected = selectedEvent?.id === evt.id;
-      const category = (evt.category || '').toLowerCase();
+      const config = getCategoryMarkerConfig(evt.category);
 
-      let color = '#22d3ee'; // cyan
-      let ringColor = 'rgba(34, 211, 238, 0.4)';
-      let icon = 'flare';
-
-      if (category.includes('wildfire')) {
-        color = '#fb5a3c'; // red-orange
-        ringColor = 'rgba(251, 90, 60, 0.4)';
-        icon = 'local_fire_department';
-      } else if (category.includes('storm')) {
-        color = '#3b82f6'; // blue
-        ringColor = 'rgba(59, 130, 246, 0.4)';
-        icon = 'air';
-      } else if (category.includes('volcano')) {
-        color = '#f43f5e'; // rose
-        ringColor = 'rgba(244, 63, 94, 0.4)';
-        icon = 'volcano';
-      } else if (category.includes('ice')) {
-        color = '#38bdf8'; // light cyan
-        ringColor = 'rgba(56, 189, 248, 0.4)';
-        icon = 'ac_unit';
-      } else if (category.includes('flood')) {
-        color = '#2dd4bf'; // teal
-        ringColor = 'rgba(45, 212, 191, 0.4)';
-        icon = 'flood';
-      }
-
-      // Performance Optimization: Only animate ping on the selected marker!
-      // Running 300 simultaneous animate-ping keyframes severely lags the browser compositor.
-      const iconHtml = `
-        <div class="relative flex items-center justify-center cursor-pointer pointer-events-auto">
+      const markerHtml = `
+        <div class="relative group cursor-pointer flex items-center justify-center -translate-x-1/2 -translate-y-1/2">
           ${
             isSelected
-              ? `<span class="absolute w-8 h-8 rounded-full animate-ping opacity-75" style="background-color: ${ringColor}; animation-duration: 1.5s;"></span>`
-              : ''
+              ? `<div class="absolute w-12 h-12 rounded-full border-2 border-primary-container animate-ping opacity-75"></div>
+                 <div class="absolute w-10 h-10 rounded-full bg-primary-container/20"></div>`
+              : `<div class="absolute w-7 h-7 rounded-full opacity-60 group-hover:scale-125 transition-transform" style="background: ${config.halo};"></div>`
           }
-          <div class="relative w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-transform duration-150 ${
-            isSelected
-              ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-[#070b14]'
-              : 'hover:scale-115'
-          }" style="background-color: ${color}; border: 1.5px solid rgba(255,255,255,0.85);">
-            <span class="material-symbols-outlined text-[13px] text-[#070b14] font-bold select-none leading-none">${icon}</span>
+          <div class="relative w-6 h-6 rounded-full flex items-center justify-center shadow-lg border border-white/20" style="background: ${
+            isSelected ? '#22d3ee' : config.color
+          }; color: #0a0e17;">
+            <span class="material-symbols-outlined text-[14px] font-bold select-none">${config.icon}</span>
           </div>
         </div>
       `;
 
       const customIcon = L.divIcon({
-        className: 'custom-map-marker',
-        html: iconHtml,
+        className: 'custom-tactical-marker',
+        html: markerHtml,
         iconSize: [24, 24],
         iconAnchor: [12, 12],
       });
 
-      const marker = L.marker([lat, lng], {
-        icon: customIcon,
-        riseOnHover: true,
-      });
-
+      const marker = L.marker([lat, lng], { icon: customIcon });
       marker.on('click', () => {
         onSelectEvent(evt);
-        map.flyTo([lat, lng], Math.max(map.getZoom(), 6), { duration: 0.8 });
       });
 
-      marker.addTo(markersLayer);
+      marker.addTo(group);
     });
   }, [events, selectedEvent, onSelectEvent]);
 
-  // Center on selected event if changed externally
+  // Center on Selected Event
   useEffect(() => {
     if (!selectedEvent || !mapInstanceRef.current) return;
     const coords = getEventCoordinates(selectedEvent);
     if (!coords) return;
     const [lng, lat] = coords;
-    mapInstanceRef.current.flyTo([lat, lng], Math.max(mapInstanceRef.current.getZoom(), 6), {
-      duration: 0.8,
+
+    mapInstanceRef.current.flyTo([lat, lng], 6, {
+      duration: 1.2,
+      easeLinearity: 0.25,
     });
   }, [selectedEvent]);
 
-  // User location marker and geofence radar circle (using Canvas)
+  // Handle User Geolocation Marker
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -327,11 +303,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
     if (userLocation) {
       const [lat, lng] = userLocation;
+
       const userHtml = `
-        <div class="relative flex items-center justify-center">
-          <span class="absolute w-8 h-8 rounded-full animate-ping bg-primary-container/40"></span>
-          <div class="w-5 h-5 rounded-full bg-primary-container border-2 border-white flex items-center justify-center shadow-lg">
-            <span class="material-symbols-outlined text-[11px] text-[#070b14]">my_location</span>
+        <div class="relative flex items-center justify-center -translate-x-1/2 -translate-y-1/2">
+          <div class="absolute w-10 h-10 rounded-full bg-primary-container/30 animate-ping"></div>
+          <div class="relative w-6 h-6 rounded-full bg-primary-container flex items-center justify-center shadow-lg border-2 border-surface">
+            <span class="material-symbols-outlined text-[14px] text-on-primary-container font-bold">my_location</span>
           </div>
         </div>
       `;
@@ -339,13 +316,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       const userIcon = L.divIcon({
         className: 'user-location-marker',
         html: userHtml,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10],
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
       });
 
       userMarkerRef.current = L.marker([lat, lng], { icon: userIcon }).addTo(map);
 
-      // 1,000 km tactical perimeter drawn on Canvas renderer for zero lag
       userCircleRef.current = L.circle([lat, lng], {
         radius: 1000 * 1000,
         color: '#22d3ee',
@@ -364,13 +340,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       className={`transition-all duration-300 ${
         isFullscreen
           ? 'fixed inset-0 z-50 w-screen h-screen rounded-none border-none bg-[#070b14]'
-          : 'relative w-full h-[520px] md:h-[580px] lg:h-[calc(100vh-17.5rem)] min-h-[460px] max-h-[720px] rounded-2xl overflow-hidden border border-outline-variant/30 bg-[#070b14] shadow-2xl'
+          : 'relative w-full h-[460px] sm:h-[520px] md:h-[580px] lg:h-[calc(100vh-17.5rem)] min-h-[380px] max-h-[720px] rounded-2xl overflow-hidden border border-outline-variant/30 bg-[#070b14] shadow-2xl'
       }`}
     >
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Basemap Switcher HUD (Top Left) */}
-      <div className="absolute top-4 left-4 z-10 flex items-center bg-surface-container-lowest/90 backdrop-blur-md rounded-xl p-1 border border-outline-variant/40 shadow-2xl">
+      {/* Basemap Switcher HUD (Top Left - Desktop View) */}
+      <div className="hidden md:flex absolute top-4 left-4 z-10 items-center bg-surface-container-lowest/90 backdrop-blur-md rounded-xl p-1 border border-outline-variant/40 shadow-2xl">
         <button
           type="button"
           onClick={() => handleSelectBasemap('satellite')}
@@ -414,9 +390,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         </button>
       </div>
 
-      {/* Telemetry HUD & Viewport Controls (Top Right) */}
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-        <div className="hidden sm:flex items-center gap-2 font-data-sm text-[0.65rem] text-primary/80 bg-surface-container-lowest/80 px-2.5 py-1.5 rounded-lg border border-outline-variant/30 backdrop-blur-sm shadow-md">
+      {/* Desktop Telemetry HUD (Top Right) */}
+      <div className="hidden md:flex absolute top-4 right-4 z-10 items-center gap-2">
+        <div className="flex items-center gap-2 font-data-sm text-[0.65rem] text-primary/80 bg-surface-container-lowest/80 px-2.5 py-1.5 rounded-lg border border-outline-variant/30 backdrop-blur-sm shadow-md">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           <span>LAYER: {basemapMode.toUpperCase()}</span>
           <span className="text-outline-variant/60">|</span>
@@ -444,6 +420,91 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
           </span>
         </button>
+      </div>
+
+      {/* Floating Tactical Vertical Controls (Right-Rail - Stitch Spec) */}
+      <div className="absolute right-3 bottom-14 md:bottom-6 z-20 flex flex-col gap-1.5">
+        {/* Zoom Controls */}
+        <div className="flex flex-col bg-surface-container-high/90 backdrop-blur-xl rounded-xl shadow-xl overflow-hidden border border-outline-variant/30">
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            aria-label="Zoom In"
+            className="w-9 h-9 flex items-center justify-center text-on-surface hover:text-primary active:bg-surface-bright transition-colors"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+          </button>
+          <div className="h-[1px] w-full bg-surface-container-highest/60" />
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            aria-label="Zoom Out"
+            className="w-9 h-9 flex items-center justify-center text-on-surface hover:text-primary active:bg-surface-bright transition-colors"
+          >
+            <span className="material-symbols-outlined text-[18px]">remove</span>
+          </button>
+        </div>
+
+        {/* Toggle Atmosphere Layers / Basemap */}
+        <button
+          type="button"
+          onClick={handleCycleBasemap}
+          aria-label="Toggle Atmosphere Layers"
+          title={`Layer: ${basemapMode}`}
+          className="w-9 h-9 rounded-xl bg-surface-container-high/90 backdrop-blur-xl flex items-center justify-center text-primary shadow-xl hover:bg-surface-bright border border-outline-variant/30 transition-colors"
+        >
+          <span className="material-symbols-outlined text-[18px]">layers</span>
+        </button>
+
+        {/* My Coordinates / Geolocation */}
+        {onLocateMe && (
+          <button
+            type="button"
+            onClick={onLocateMe}
+            aria-label="My Coordinates"
+            title="Locate station GPS"
+            className="w-9 h-9 rounded-xl bg-surface-container-high/90 backdrop-blur-xl flex items-center justify-center text-on-surface-variant hover:text-primary shadow-xl border border-outline-variant/30 transition-colors"
+          >
+            <span
+              className={`material-symbols-outlined text-[18px] ${
+                isLocating ? 'animate-spin text-primary' : userLocation ? 'text-primary' : ''
+              }`}
+            >
+              my_location
+            </span>
+          </button>
+        )}
+
+        {/* Recenter Global */}
+        <button
+          type="button"
+          onClick={handleRecenter}
+          aria-label="Recenter Global"
+          title="Reset Global Earth View"
+          className="w-9 h-9 rounded-xl bg-surface-container-high/90 backdrop-blur-xl flex items-center justify-center text-on-surface-variant hover:text-primary shadow-xl border border-outline-variant/30 transition-colors md:hidden"
+        >
+          <span className="material-symbols-outlined text-[18px]">travel_explore</span>
+        </button>
+      </div>
+
+      {/* Floating Category Micro-Legend (Bottom-Left - Stitch Spec) */}
+      <div className="absolute left-3 bottom-14 md:bottom-6 z-20 bg-surface-container-lowest/85 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-2.5 shadow-md border border-outline-variant/30">
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#fb5a3c]" />
+          <span className="font-label-caps text-[9px] text-on-surface-variant uppercase">Fire</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#22d3ee]" />
+          <span className="font-label-caps text-[9px] text-on-surface-variant uppercase">Storm</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#f43f5e]" />
+          <span className="font-label-caps text-[9px] text-on-surface-variant uppercase">Volcano</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#2dd4bf]" />
+          <span className="font-label-caps text-[9px] text-on-surface-variant uppercase">Flood</span>
+        </div>
       </div>
     </div>
   );
