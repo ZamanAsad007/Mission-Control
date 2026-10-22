@@ -69,3 +69,29 @@
   background: transparent !important;
   border: none !important;
 }
+
+/* Leaflet dark theme container & tiles with GPU acceleration */
+.leaflet-container {
+  background-color: #070b14 !important;
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.leaflet-tile-container {
+  will-change: transform;
+}
+
+.custom-map-marker {
+  will-change: transform;
+  contain: layout style paint;
+}
+
+.user-location-marker {
+  will-change: transform;
+  contain: layout style paint;
+}
+
+.leaflet-tile-dark {
+  filter: brightness(0.65) invert(1) contrast(2.8) hue-rotate(200deg) saturate(0.3) brightness(0.75);
+}
