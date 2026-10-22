@@ -80,7 +80,10 @@ export const MapPage: React.FC = () => {
   };
 
   const allEvents = useMemo(() => {
-    const source = isNearbyMode && nearbyEventsResponse?.data ? nearbyEventsResponse.data : eventsResponse?.data || [];
+    const source =
+      isNearbyMode && nearbyEventsResponse?.data
+        ? nearbyEventsResponse.data
+        : eventsResponse?.data || [];
     return source.filter((e) => getEventCoordinates(e) !== null);
   }, [isNearbyMode, nearbyEventsResponse, eventsResponse]);
 
@@ -114,9 +117,9 @@ export const MapPage: React.FC = () => {
   }, [allEvents, selectedCategory, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Top Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="flex flex-col gap-3 md:gap-4">
+      {/* Desktop Header Row (Hidden on Mobile) */}
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-primary-container animate-pulse" />
@@ -125,7 +128,7 @@ export const MapPage: React.FC = () => {
             </h1>
           </div>
           <p className="font-body-md text-xs text-on-surface-variant">
-            NASA EONET & DONKI Planetary Hazard Telemetry · Multi-sensor Tracking
+            NASA EONET &amp; DONKI Planetary Hazard Telemetry · Multi-sensor Tracking
           </p>
         </div>
 
@@ -165,35 +168,162 @@ export const MapPage: React.FC = () => {
         </div>
       )}
 
-      {/* Filter Bar */}
-      <MapFilterPanel
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-        dateRange={dateRange}
-        onSelectDateRange={setDateRange}
-        categoryCounts={categoryCounts}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-      />
+      {/* Desktop Filter Bar (Hidden on Mobile) */}
+      <div className="hidden md:block">
+        <MapFilterPanel
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          dateRange={dateRange}
+          onSelectDateRange={setDateRange}
+          categoryCounts={categoryCounts}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+        />
+      </div>
 
       {/* Map Viewport Container */}
-      <div className="relative">
+      <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl">
+        {/* Floating Top Search & Quick Filters Strip (Mobile Only - Stitch Spec) */}
+        <div className="md:hidden absolute top-2.5 inset-x-2.5 flex flex-col gap-2 z-20">
+          {/* Primary Search Pill */}
+          <div className="flex items-center gap-2 bg-surface-container/90 backdrop-blur-xl px-3 py-1.5 rounded-full shadow-lg border border-outline-variant/30">
+            <span className="material-symbols-outlined text-on-surface-variant text-[18px]">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search events, coordinates..."
+              className="bg-transparent text-xs text-on-surface placeholder:text-outline w-full focus:outline-none font-body-sm tracking-tight"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="w-5 h-5 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors shrink-0"
+              >
+                <span className="material-symbols-outlined text-[13px]">close</span>
+              </button>
+            )}
+          </div>
+
+          {/* Quick Feed Metadata & Range Pills Row */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5 bg-surface-container-lowest/85 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-outline-variant/30 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse" />
+              <span className="font-data-sm text-[10px] text-on-surface-variant">
+                {filteredEvents.length} ACTIVE · NASA EONET
+              </span>
+            </div>
+
+            {/* Time Range Selector */}
+            <div className="flex items-center gap-1 bg-surface-container-lowest/85 backdrop-blur-md p-0.5 rounded-full border border-outline-variant/30 shadow-sm">
+              {(['24h', '7d', '30d'] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setDateRange(r)}
+                  className={`px-2 py-0.5 rounded-full font-label-caps text-[9px] uppercase transition-all ${
+                    dateRange === r
+                      ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
+                      : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  {r.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category Filter Carousel (Horizontal Scroll - Stitch Spec) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+            {/* All */}
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 shadow-sm font-label-caps text-[10px] transition-all ${
+                selectedCategory === 'all'
+                  ? 'bg-primary-container text-on-primary-container font-bold'
+                  : 'bg-surface-container-high/80 backdrop-blur-md text-on-surface-variant hover:text-on-surface border border-outline-variant/30'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-primary-container" />
+              <span>ALL ({categoryCounts.all || 0})</span>
+            </button>
+
+            {/* Wildfires */}
+            <button
+              onClick={() => setSelectedCategory('wildfires')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 font-label-caps text-[10px] transition-all ${
+                selectedCategory === 'wildfires'
+                  ? 'bg-rose-500 text-white font-bold shadow-sm'
+                  : 'bg-surface-container-high/80 backdrop-blur-md text-rose-300 hover:text-rose-200 border border-outline-variant/30'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px] text-rose-400">
+                local_fire_department
+              </span>
+              <span>WILDFIRES ({categoryCounts.wildfires || 0})</span>
+            </button>
+
+            {/* Storms */}
+            <button
+              onClick={() => setSelectedCategory('severeStorms')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 font-label-caps text-[10px] transition-all ${
+                selectedCategory === 'severeStorms'
+                  ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
+                  : 'bg-surface-container-high/80 backdrop-blur-md text-primary hover:text-white border border-outline-variant/30'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px] text-primary">cyclone</span>
+              <span>STORMS ({categoryCounts.severeStorms || 0})</span>
+            </button>
+
+            {/* Volcanoes */}
+            <button
+              onClick={() => setSelectedCategory('volcanoes')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 font-label-caps text-[10px] transition-all ${
+                selectedCategory === 'volcanoes'
+                  ? 'bg-fuchsia-500 text-white font-bold shadow-sm'
+                  : 'bg-surface-container-high/80 backdrop-blur-md text-fuchsia-300 hover:text-fuchsia-200 border border-outline-variant/30'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px] text-fuchsia-400">volcano</span>
+              <span>VOLCANOES ({categoryCounts.volcanoes || 0})</span>
+            </button>
+
+            {/* Floods */}
+            <button
+              onClick={() => setSelectedCategory('floods')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 font-label-caps text-[10px] transition-all ${
+                selectedCategory === 'floods'
+                  ? 'bg-teal-500 text-white font-bold shadow-sm'
+                  : 'bg-surface-container-high/80 backdrop-blur-md text-teal-300 hover:text-teal-200 border border-outline-variant/30'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px] text-teal-400">flood</span>
+              <span>FLOODS ({categoryCounts.floods || 0})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tactical Map with custom right-rail controls & micro-legend */}
         <TacticalMap
           events={filteredEvents}
           selectedEvent={selectedEvent}
           onSelectEvent={setSelectedEvent}
           userLocation={userLocation}
+          onLocateMe={handleLocateMe}
+          isLocating={isLocating}
         />
 
-        {/* Selected Event Detail Drawer */}
+        {/* Selected Event Detail Drawer / Interactive Bottom Sheet */}
         <EventDetailDrawer
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onCenterMap={(evt) => setSelectedEvent({ ...evt })}
         />
 
-        {/* Bottom-Left Tactical HUD Map Legend */}
-        <div className="absolute bottom-4 left-4 z-10 p-3 rounded-xl bg-surface-container-low/90 backdrop-blur-md border border-outline-variant/40 shadow-xl flex flex-col gap-2 max-w-xs select-none">
+        {/* Desktop Bottom-Left Tactical HUD Map Legend (Hidden on Mobile) */}
+        <div className="hidden md:flex absolute bottom-4 left-4 z-10 p-3 rounded-xl bg-surface-container-low/90 backdrop-blur-md border border-outline-variant/40 shadow-xl flex-col gap-2 max-w-xs select-none">
           <span className="font-label-caps text-[0.625rem] text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/20 pb-1">
             Hazard Spectrum Key
           </span>
