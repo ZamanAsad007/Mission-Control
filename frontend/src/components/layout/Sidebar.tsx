@@ -32,7 +32,7 @@ export const Sidebar: React.FC = () => {
     : null;
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-60 bg-surface-container-low border-r border-outline-variant/30 z-50 flex flex-col justify-between select-none">
+    <aside className="hidden md:flex fixed left-0 top-0 h-full w-60 bg-surface-container-low border-r border-outline-variant/30 z-50 flex-col justify-between select-none">
       <div className="flex flex-col">
         {/* Brand Header */}
         <div className="h-16 px-space-md border-b border-outline-variant/30 flex items-center gap-space-sm bg-surface-container-lowest/60 backdrop-blur-md">
