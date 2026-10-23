@@ -21,6 +21,7 @@ flowchart TD
         NEOWS["NeoWs API<br/>(Near-Earth Asteroids)"]
         DONKI["DONKI API<br/>(Space Weather & CMEs)"]
         EONET["EONET API<br/>(Natural Earth Hazards)"]
+        EPIC["EPIC API<br/>(DSCOVR Earth Imagery)"]
     end
 
     subgraph Ingestion["Ingestion Layer"]
@@ -42,7 +43,7 @@ flowchart TD
     end
 
     subgraph Backend["Core API Layer"]
-        API["API Service (Express.js)<br/>- OpenAPI / Swagger Docs<br/>- JWT Authentication & RBAC<br/>- Redis Rate Limiter & Cache<br/>- SSE Streaming Server"]
+        API["API Service (Express.js)<br/>- OpenAPI / Swagger Docs<br/>- JWT Authentication & RBAC<br/>- Redis Rate Limiter & Cache<br/>- SSE Streaming Server<br/>- Cosmic Birthday Resolver"]
     end
 
     subgraph Ingress["Reverse Proxy & Gateway"]
@@ -50,7 +51,7 @@ flowchart TD
     end
 
     subgraph UI["Frontend User Experience"]
-        SPA["Mission Control SPA<br/>(React 18 + Vite + Tailwind CSS)<br/>- APOD Hero<br/>- Leaflet PostGIS Map<br/>- Three.js 3D Asteroid Radar<br/>- Recharts Space Weather<br/>- Live Alert Configuration"]
+        SPA["Mission Control SPA<br/>(React 18 + Vite + Tailwind CSS)<br/>- APOD Hero & Cosmic Birthday<br/>- Leaflet PostGIS Map<br/>- Three.js 3D Asteroid Radar<br/>- Recharts Space Weather<br/>- Tactical Mobile Bottom Nav<br/>- Operator Profile & Alert Rules"]
     end
 
     APOD --> INGEST
@@ -71,6 +72,7 @@ flowchart TD
 
     REDIS -->|Subscribe & Cache| API
     PG <-->|Query telemetry & auth| API
+    EPIC -.->|Query Earth imagery| API
 
     GATEWAY -->|/api/*| API
     GATEWAY -->|/*| SPA
@@ -128,6 +130,18 @@ flowchart TD
 ### 📡 6. Real-Time Server-Sent Events (SSE)
 - Live ticker in the navigation header streaming newly detected events to all connected clients without polling.
 
+### 🎂 7. Cosmic Birthday Time Machine (`/birthday`)
+- Journey back to any birthdate or historical milestone to discover NASA APOD imagery and DSCOVR EPIC (Earth Polychromatic Imaging Camera) 1,000,000-mile sunlit Earth photographs.
+- Intelligent multi-year fallback algorithms ensure high-resolution Earth assets render gracefully even for dates prior to satellite deployment.
+
+### 📱 8. Tactical Mobile Navigation & Bottom Drawer Telemetry
+- Responsive mission control shell with an ergonomic mobile bottom navigation bar (`MobileBottomNav`).
+- Touch-friendly slide-up bottom sheets and inspection drawers matching command dashboard UX.
+
+### 👤 9. Operator Profile & Direct Channel Verification
+- Integrated operator modal for managing authentication credentials, Telegram Chat IDs, and Discord Webhooks.
+- Live test dispatch button (`/api/alerts/test`) to verify Telegram, Discord, and Mailpit email channels instantly with immediate feedback.
+
 ---
 
 ## 🏁 Quick Start
@@ -181,10 +195,16 @@ make backfill
 |---|---|
 | `make up` | Build and start all services in Docker in detached mode |
 | `make down` | Stop and remove all containers and network bridges |
+| `make restart` | Gracefully restart all running Docker containers |
 | `make build` | Build all Docker container images from source |
 | `make backfill` | Run historical backfill ingestion job inside the running stack |
 | `make test` | Execute unit, contract, and integration test suites across all workspaces |
 | `make dev` | Start frontend Vite development server on host machine |
+| `make logs` | Follow aggregate logs from all running Docker containers |
+| `make ps` | Check health and runtime status of stack containers |
+| `make clean` | Stop containers and wipe persistent Docker volumes |
+| `make lint` | Run ESLint across all monorepo packages and services |
+| `make format` | Check and enforce code formatting with Prettier |
 
 ---
 
@@ -195,18 +215,24 @@ Explore interactive OpenAPI documentation directly at `/api/docs`.
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/health` | None | System health check (Postgres, Redis connectivity) |
-| `POST` | `/api/auth/register` | None | Register a new user |
-| `POST` | `/api/auth/login` | None | Authenticate user & receive JWT token |
+| `POST` | `/api/auth/register` | None | Register a new operator |
+| `POST` | `/api/auth/login` | None | Authenticate operator & receive JWT token |
+| `GET` | `/api/auth/me` | JWT | Retrieve authenticated operator profile |
+| `PUT` | `/api/auth/profile` | JWT | Update operator Telegram/Discord settings or password |
 | `GET` | `/api/apod` | None | Get APOD for today (or query by `?date=YYYY-MM-DD`) |
 | `GET` | `/api/asteroids` | None | List approaching asteroids with hazardous filter |
-| `GET` | `/api/events` | None | Query Earth natural events with category & PostGIS radius |
-| `GET` | `/api/stats` | None | Aggregate counts of events, asteroids, and flares |
+| `GET` | `/api/events` | None | Query Earth natural events with category & limit filters |
+| `GET` | `/api/events/nearby` | None | Query nearby events within PostGIS radius (`?lat=&lng=&radiusKm=`) |
+| `GET` | `/api/events/:id` | None | Get specific natural event details by ID |
+| `GET` | `/api/stats/space-weather` | None | Aggregate space weather counts broken down by days |
 | `GET` | `/api/stream/events` | None | Server-Sent Events (SSE) real-time stream |
-| `GET` | `/api/alerts` | JWT | Get user's configured alert rules |
-| `POST` | `/api/alerts` | JWT | Create a new alert rule |
-| `PUT` | `/api/alerts/:id` | JWT | Update existing alert rule (activate/pause/channels) |
-| `DELETE` | `/api/alerts/:id` | JWT | Remove an alert rule |
-| `GET` | `/api/alerts/history` | JWT | View user notification delivery logs |
+| `GET` | `/api/alerts/rules` | JWT | Get user's configured alert rules |
+| `POST` | `/api/alerts/rules` | JWT | Create a new alert rule |
+| `PUT` | `/api/alerts/rules/:id` | JWT | Update existing alert rule (activate/pause/channels) |
+| `DELETE` | `/api/alerts/rules/:id` | JWT | Remove an alert rule |
+| `GET` | `/api/alerts/history` | JWT | View user notification delivery audit logs |
+| `POST` | `/api/alerts/test` | JWT | Dispatch instant test alert to Telegram, Discord, or Email |
+| `GET` | `/api/birthday` | None | Query APOD and EPIC Earth imagery for any date (`?date=YYYY-MM-DD`) |
 
 ---
 
@@ -247,7 +273,7 @@ npm test --workspace=@mission-control/alert-service
 
 ## 🔭 What I'd Improve (Roadmap)
 
-- [ ] **Cosmic Birthday Explorer (`/birthday`):** Query historical APOD and EPIC Earth images corresponding to any input date.
+- [x] **Cosmic Birthday Explorer (`/birthday`):** Historical APOD & DSCOVR EPIC Earth imagery resolver with multi-year fallback.
 - [ ] **Observability:** Prometheus metrics scraping endpoint with preconfigured Grafana dashboards for API latency and ingestion success rates.
 - [ ] **NASA Exoplanet Archive Integration:** Interactive 3D visualization of confirmed exoplanetary systems.
 - [ ] **Progressive Web App (PWA):** Offline cache manifests and Web Push notifications for critical space weather alerts.
@@ -257,7 +283,7 @@ npm test --workspace=@mission-control/alert-service
 ## 📜 Data Attribution & Disclaimer
 
 Space weather, asteroid trajectories, natural hazard events, and imagery are provided courtesy of **NASA Open APIs** and the **NASA Earth Science Division**:
-- [NASA Open APIs](https://api.nasa.gov/) (APOD, NeoWs, DONKI)
+- [NASA Open APIs](https://api.nasa.gov/) (APOD, NeoWs, DONKI, EPIC)
 - [NASA Earth Observatory Natural Event Tracker (EONET)](https://eonet.gsfc.nasa.gov/)
 
 This project is an open-source educational dashboard and is not officially affiliated with or endorsed by the National Aeronautics and Space Administration (NASA).
